@@ -1,4 +1,4 @@
-# MoreRed: Molecular Relaxation by Reverse Diffusion
+# MoreRed: Molecular Relaxation by Reverse Diffusion with Time Step Prediction
 
 [MoreRed (Molecular Relaxation by Reverse Diffusion)](https://iopscience.iop.org/article/10.1088/2632-2153/ad652c) is a generative diffusion model that can generate new structures or denoise arbitrarily noisy ones. Unlike previous geometry relaxation methods, which require labeled equilibrium and non-equilibrium structures, MoreRed is trained using **exclusively unlabeled equilibrium structures**. Despite this, it effectively relaxes non-equilibrium structures, achieving competitive results with **much less data**, exhibiting better robustness to the noise level in the input and reducing computation time during relaxation.
 
