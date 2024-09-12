@@ -26,11 +26,10 @@ MoreRed is built on top of [SchNetPack 2.0](https://github.com/atomistic-machine
 
 + [News](/README.md##News)
 + [Installation](/README.md##Installation)
-+ [Training](/README.md##Training)
-+ [Pre-trained models](/README.md##Pre-trained-models)
-+ [Molecular relaxation](/README.md##Molecular-relaxation)
-+ [Molecular structure generation](/README.md##Molecular-structure-generation)
++ [Using pre-trained models](/README.md##Using-pre-trained-models)
++ [Molecular relaxation and structure generation](/README.md##Molecular-relaxation-relaxation-and-structure-generation)
 + [Tutorials](/README.md##Tutorials)
++ [Training your own models](/README.md##Training-your-own-models)
 + [How to cite](/README.md##How-to-cite)
 
 ## News
@@ -58,8 +57,19 @@ Now to install the package, inside the folder `MoreRed` run:
 ```
 pip install .
 ```
+## Using pre-trained models
+Under the folder `models`, you can find the final models trained on QM9 and Qm7-X datasets until complete convergence. You can load the models using `torch.load()` command. Besides, the tutorial notebooks provide details on how to use the models.
 
-## Training
+## Molecular relaxation and structure generation
+The notebook `notebooks/denoising_tutorial.ipynb` explains how the trained models can be used for denoising and generation from scratch using different samplers.
+Under `src/morered/sampling`, you can find ready-to-use Python classes implementing the different samplers: `MoreRed-ITP`, `MoreRed-JT`, `MoreRed-AS`, `DDPM`. The same classes can be used for denoising/relaxation of noisy structures as well as for new structure generation.
+
+## Tutorials
+Under `notebooks`, we provide different tutorials in the form of Jupyter notebooks, that will be continually updated:
+  - `diffusion_tutorial.ipynb`: explains how to use the diffusion processes implemented in `morered`.
+  - `denoising_tutorial.ipynb`: explains how to use the trained models with the different samplers implemented in `morered` for noisy structure relaxation or generation from scratch. Under the folder `models`, we provide final models trained on QM9 and QM7-X datasets until complete convergence.
+
+## Training your own models
 The human-readable and customizable YAML configuration files under `src/morered/configs` are all you need to train and run customizable experiments with `morered`. They follow the configuration structure used in [SchNetPack 2.0](https://github.com/atomistic-machine-learning/schnetpack/tree/master). Here, we explain how to train and use the different models.
 
 Installing `morered` using pip adds the new CLI command `mrdtrain`, which can be used to train the different models by running the command:
@@ -104,18 +114,6 @@ mrdtrain --config-dir=<path/to/my_configs> experiment=<my_experiment>
 
 ```
 More about overwriting configurations in the CLI can be found in the [SchNetPack 2.0](https://github.com/atomistic-machine-learning/schnetpack/tree/master) documentation. 
-
-## Pre-trained models
-Under the folder `models`, you can find the final models trained on QM9 and Qm7-X datasets until complete convergence. You can load the models using `torch.load()` command. Besides, the tutorial notebooks provide details on how to use the models.
-
-## Molecular relaxation/generation
-The notebook `notebooks/denoising_tutorial.ipynb` explains how the trained models can be used for denoising and generation from scratch using different samplers.
-Under `src/morered/sampling`, you can find ready-to-use Python classes implementing the different samplers: `MoreRed-ITP`, `MoreRed-JT`, `MoreRed-AS`, `DDPM`. The same classes can be used for denoising/relaxation of noisy structures as well as for new structure generation.
-
-## Tutorials
-Under `notebooks`, we provide different tutorials in the form of Jupyter notebooks, that will be continually updated:
-  - `diffusion_tutorial.ipynb`: explains how to use the diffusion processes implemented in `morered`.
-  - `denoising_tutorial.ipynb`: explains how to use the trained models with the different samplers implemented in `morered` for noisy structure relaxation or generation from scratch. Under the folder `models`, we provide final models trained on QM9 and QM7-X datasets until complete convergence.
 
 ## How to cite
 if you use MoreRed in your research, please cite the corresponding publication:
