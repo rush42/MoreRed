@@ -367,3 +367,37 @@ class VPGaussianDDPM(GaussianDDPM):
         mu = inv_sqrt_alpha_t * (x_t - (beta_t * inv_sqrt_beta_t_bar) * noise)
 
         return mu, sigma_t
+
+    def score_function(
+        self,
+        noise: torch.Tensor,
+        idx_m: Optional[torch.Tensor],
+        t: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        Computes the estimated score function for the reverse process.
+
+        Args:
+            noise: the (predicted) Gaussian noise to be removed.
+            t: current time steps.
+        """
+        # convert to correct dtype
+        noise = noise.to(self.dtype)
+
+        noise, t = _check_shapes(noise, t)
+
+        # if invariant, center the noise to zero center of geometry.
+        # Safeguard if model prediction was not centered.
+        if self.invariant:
+            noise = batch_center_systems(noise, idx_m, None)
+
+        # get alpha_bar
+        alpha_bar = self.noise_schedule(
+            t,
+            keys=["alpha_bar"],
+        )["alpha_bar"]
+
+        # compute the score function
+        score = noise * torch.sqrt(1 - alpha_bar)
+        
+        return score
