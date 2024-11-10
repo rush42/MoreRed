@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from morered.processes import DiffusionProcess
 from morered.sampling import Sampler
-from morered.utils import compute_neighbors, scatter_mean
+from morered.utils import compute_neighbors
 
 __all__ = ["DDPM"]
 
@@ -103,22 +103,7 @@ class DDPM(Sampler):
                 "Sampling using different starting steps is not supported yet for DDPM."
             )
 
-        # copy inputs to avoid inplace operations
-        batch = {prop: val.clone().to(self.device) for prop, val in inputs.items()}
-
-        # check if center of geometry is close to zero
-        CoG = scatter_mean(
-            batch[properties.R], batch[properties.idx_m], batch[properties.n_atoms]
-        )
-        if self.diffusion_process.invariant and (CoG > 1e-5).any():
-            raise ValueError(
-                "The input positions are not centered, "
-                "while the specified diffusion process is invariant."
-            )
-
-        # set all atoms as neighbors and compute neighbors only once before starting.
-        if not self.recompute_neighbors:
-            batch = compute_neighbors(batch, fully_connected=True, device=self.device)
+        batch = self.prepare_batch(inputs)
 
         # history of the reverse steps
         hist = []
