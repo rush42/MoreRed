@@ -1,14 +1,16 @@
 import logging
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 import schnetpack.transform as trn
 import torch
+from torch import nn
 from schnetpack import properties
 
 from morered.processes.base import DiffusionProcess
+from morered.sampling.probabilty_flow import ProbabilityFlow
 from morered.utils import batch_center_systems
 
-__all__ = ["AllToAllNeighborList", "BatchSubtractCenterOfMass", "Diffuse"]
+__all__ = ["AllToAllNeighborList", "BatchSubtractCenterOfMass", "Diffuse", "TakeProbabilityFlowStep"]
 
 
 class AllToAllNeighborList(trn.NeighborListTransform):
@@ -172,6 +174,86 @@ class Diffuse(trn.Transform):
         # normalize the time step to [0,1].
         outputs[self.time_key] = self.diffusion_process.normalize_time(
             outputs[self.time_key]
+        )
+
+        # update the returned inputs.
+        inputs.update(outputs)
+
+        return inputs
+
+
+class TakeProbabilityFlowStep(trn.Transform):
+    """
+    Wrapper class to take a probability flow step after diffusion.
+    """
+
+    is_preprocessor: bool = True
+    is_postprocessor: bool = False
+
+    def __init__(
+        self,
+        positions_key: str,
+        probability_flow: ProbabilityFlow,
+        output_key: Optional[str] = None,
+        time_key: str = "t",
+        output_time_key: str = "t-1",
+    ):
+        """
+        Args:
+            positions_key: key to the atom positions.
+            probability_flow: the probability flow to use.
+            output_key: key to store the succesive postions.
+                        if None, the positions_key key is used.
+            time_key: key to save the normalized diffusion time step.
+        """
+        super().__init__()
+        self.position_key = positions_key
+        self.output_key = output_key or positions_key
+        self.time_key = time_key
+        self.probability_flow = probability_flow
+        self.output_time_key = output_time_key
+        # Sanity check
+        if (
+            not self.probability_flow.diffusion_process.invariant
+            and self.position_key == properties.R
+        ):
+            logging.error(
+                "Diffusing atom positions R without invariant constraint"
+                "(invariant=False) might lead to unexpected results."
+            )
+
+    def forward(self, inputs: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        Define the probability flow transformation.
+
+        Args:
+            inputs: dictionary of input tensors as in SchNetPack.
+        """
+        x_t = inputs[self.position_key]
+
+        # save the original value.
+        outputs = {
+            f"original_{self.position_key}": x_t,
+        }
+
+        # get the time step from the normalized time.
+        t = self.probability_flow.diffusion_process.unnormalize_time(inputs[self.time_key])
+        assert torch.all(t == t[0])
+
+        # if t = 1 return the original positions. Otherwise take a probability flow step. 
+        if t[0] == 1:
+            outputs[self.output_key] = inputs[f"original_{self.position_key}"] 
+        else:
+            # take on step in the probability flow.
+            _, increment = self.probability_flow.get_increment(inputs, t)
+            outputs[self.output_key] = x_t - increment
+
+        # decrease the time step by one for all atoms.
+        outputs[self.output_time_key] = t - 1
+
+        # normalize the time step to [0,1].
+        outputs[self.output_time_key] = self.diffusion_process.normalize_time(
+            outputs[self.output_time_key]
         )
 
         # update the returned inputs.
