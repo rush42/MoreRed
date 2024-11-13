@@ -21,7 +21,9 @@ class ProbabilityFlow(DDPM):
         super().__init__(*args, **kwargs)
 
     @abstractmethod
-    def get_increment(self, batch, i):
+    def get_increment(
+        self, batch: Dict[str, torch.Tensor], i: int
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Get the increment for the reverse ODE process.
         Args:
@@ -108,7 +110,9 @@ class ProbabilityFlowEuler(ProbabilityFlow):
         # Pass all arguments to the `DDPM` constructor
         super().__init__(*args, **kwargs)
 
-    def get_increment(self, batch, i):
+    def get_increment(
+        self, batch: Dict[str, torch.Tensor], i: int
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         # get the time steps and noise predictions from the denoiser
         time_steps, noise = self.inference_step(batch, i)
 
@@ -128,7 +132,9 @@ class ProbabilityFlowHeun(ProbabilityFlow):
         # Pass all arguments to the `DDPM` constructor
         super().__init__(*args, **kwargs)
 
-    def get_increment(self, batch, i):
+    def get_increment(
+        self, batch: Dict[str, torch.Tensor], i: int
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         # get the time steps and noise predictions from the denoiser
         time_steps, noise = self.inference_step(batch, i)
 
@@ -144,7 +150,9 @@ class ProbabilityFlowHeun(ProbabilityFlow):
         intermediate_state[properties.R] = batch[properties.R] - scores
 
         # get the time steps and noise predictions  for the intermediate state
-        intermediate_time_steps, intermediate_noise = self.inference_step(intermediate_state, i - 1)
+        intermediate_time_steps, intermediate_noise = self.inference_step(
+            intermediate_state, i - 1
+        )
 
         intermediate_scores = self.diffusion_process.score_function(
             intermediate_noise,
