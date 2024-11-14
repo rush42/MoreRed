@@ -1,3 +1,4 @@
+import copy
 import inspect
 import logging
 from typing import Dict, Optional
@@ -312,3 +313,170 @@ class DiffusionTask(AtomisticTask):
         loss = self._step(batch, "test")
 
         return {"test_loss": loss}
+
+
+class ConsitencyTask(AtomisticTask):
+    """
+    Defines the consitency task for pytorch lightning as proposed by Song et al 2021.
+    Subclasses the atomistic task and adds the diffusion NLL.
+    """
+
+    def __init__(
+        self,
+        model: nn.Module,
+        time_key: str = "t",
+        time_hat_key: str = "t-1",
+        x_t_key: str = '_positions',
+        x_t_hat_key: str = '_positions_hat',
+        loss_fn: nn.Module = nn.MSELoss(reduction='sum'),
+        ema_decay = 0.99,
+        **kwargs,
+    ):
+        """
+        Args:
+            time_key: key of the true diffusion time step in the input dictionary.
+            time_hat_key: key of the true computed PF ODE time step in the input dictionary.
+            x_t_key: key of the sampled positions at time t.
+            x_t_hat_key: key of the computed PF ODE positions at time t - 1.
+        """
+        super().__init__(**kwargs)
+
+        self.time_key = time_key
+        self.time_hat_key = time_hat_key
+        self.x_t_key = x_t_key
+        self.x_t_hat_key = x_t_hat_key
+        self.ema_decay = ema_decay
+        self.loss_fn = loss_fn
+
+        self.online_model = model
+        # create a target model for the consistency task with detached parameters
+        self.target_model = copy.deepcopy(model)
+        for param in self.target_model.parameters():
+            param.requires_grad = False
+
+    def setup(self, stage=None):
+        """
+        overwrite the pytorch lightning task setup function.
+        """
+        # call the parent atomistic task setup
+        AtomisticTask.setup(self, stage=stage)  # type: ignore
+
+    def update_target_model(self):
+        """
+        update the target model with the online model parameters.
+        """
+        for target_param, online_param in zip(self.target_model.parameters(), self.online_model.parameters()):
+            target_param.data = self.ema_decay * target_param.data + (1 - self.ema_decay) * online_param.data
+
+    def forward(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        forward pass through the target model
+
+        Args:
+            inputs: input batch.
+        """
+        # calculate the forward pass for the target model
+        pred = self.target_model(batch)
+
+        return pred
+    
+    def forward_online(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        forward pass through the online model
+
+        Args:
+            inputs: input batch.
+        """
+        # calculate the forward pass for the online model
+        pred = self.online_model(batch)
+
+        return pred
+    
+    def _batch_hat(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        get the batch for x_t_hat and t_hat.
+
+        Args:
+            batch: input batch.
+        """
+        batch_hat = copy.deepcopy(batch)
+        batch_hat[self.x_t_key] = batch_hat[self.x_t_hat_key]
+        batch_hat[self.time_key] = batch_hat[self.time_hat_key]
+        return batch_hat
+
+    def training_step(
+        self, batch: Dict[str, torch.Tensor], batch_idx: int
+    ) -> Optional[torch.FloatTensor]:
+        """
+        define the training step for pytorch lightning.
+
+        Args:
+            batch: input batch.
+            batch_idx: batch index.
+        """
+
+        target_pred = self.forward(batch)
+
+        online_batch = self._batch_hat(batch)
+        online_pred = self.forward_online(online_batch)
+
+        # calculate the loss between online and target prediction
+        loss = self.loss_fn(online_pred, target_pred)
+
+        self.log(f"train_loss", loss, on_step=True, on_epoch=False, prog_bar=False)
+
+        return loss
+    
+    def _target_loss(self, batch: Dict[str, torch.Tensor], subset) -> Optional[torch.FloatTensor]:
+        """
+        evaluate the target model.
+
+        Args:
+            batch: input batch.
+            batch_idx: batch index.
+        """
+        batch_hat = self._batch_hat(batch)
+        pred = self.forward(batch)
+        pred_hat = self.forward(batch_hat)
+
+        # calculate the loss between online and target prediction
+        loss = self.loss_fn(pred, pred_hat)
+
+        # loging
+        self.log(f"validation_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log_metrics(pred, pred_hat, subset)
+
+        return loss
+
+    def validation_step(
+        self, batch: Dict[str, torch.Tensor], batch_idx: int
+    ) -> Optional[torch.FloatTensor]:
+        """
+        define the validation step for pytorch lightning.
+
+        Args:
+            batch: input batch.
+            batch_idx: batch index.
+        """
+        loss = self._target_loss(batch, 'validation')
+
+        return {"validation_loss": loss}
+    
+    def test_step(
+        self, batch: Dict[str, torch.Tensor], batch_idx: int
+    ) -> Optional[torch.FloatTensor]:
+        """
+        define the test step for pytorch lightning.
+
+        Args:
+            batch: input batch.
+            batch_idx: batch index.
+        """
+        loss = self._target_loss(batch, 'test')
+
+        return {"test_loss": loss}
+    
+    def on_after_backward(self):
+        # update the target model with the new online model parameters
+        self.update_target_model()
+        return super().on_after_backward()
