@@ -111,7 +111,7 @@ task:
     cooldown: 10
     min_lr: 0.0
     smoothing_factor: 0.0
-  _target_: morered.task.ConsitencyTask
+  _target_: morered.ConsitencyTask
   warmup_steps: 0
   time_key: ${globals.time_target_key}
   time_hat_key: ${globals.time_hat_target_key}
