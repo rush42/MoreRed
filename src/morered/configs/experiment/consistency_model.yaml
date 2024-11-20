@@ -1,0 +1,218 @@
+# @package _global_
+
+run:
+  work_dir: ${hydra:runtime.cwd}
+  data_dir: ${run.work_dir}/data
+  path: ${run.work_dir}/runs
+  model_dir: ${run.work_dir}/../../models
+  experiment: consistency_model
+  id: ${uuid:1}
+  ckpt_path: null
+
+globals:
+  model_path: best_model
+  cutoff: 5.0
+  lr: 0.0001
+  n_atom_basis: 256
+  noise_target_key: eps
+  noise_output_key: eps_pred
+  mean_output_key: mu_pred
+  time_target_key: t
+  time_hat_target_key: 't-1'
+  x_t_target_key: '_positions'
+  x_t_hat_target_key: '_positions_hat'
+  denoiser_path: "${run.model_dir}/qm7x_ddpm.pt"
+
+  noise_schedule:
+    _target_: morered.noise_schedules.PolynomialSchedule
+    T: 1000
+    s: 1.0e-05
+    dtype: float64
+    variance_type: lower_bound
+
+  diffusion_process:
+    _target_: morered.processes.VPGaussianDDPM
+    noise_schedule: ${globals.noise_schedule}
+    invariant: true
+    noise_key: ${globals.noise_target_key}
+    dtype: float64
+
+  probability_flow:
+    _target_: morered.sampling.ProbabilityFlowHeun
+    diffusion_process: ${globals.diffusion_process}
+    noise_pred_key: ${globals.noise_output_key}
+    time_key: ${globals.time_target_key}
+    denoiser: ${globals.denoiser_path}
+    cutoff: ${globals.cutoff}
+
+trainer:
+  _target_: pytorch_lightning.Trainer
+  devices: 1
+  min_epochs: null
+  max_epochs: 100000
+  enable_model_summary: true
+  profiler: null
+  gradient_clip_val: 0.5
+  accumulate_grad_batches: 1
+  val_check_interval: 1.0
+  check_val_every_n_epoch: 1
+  num_sanity_val_steps: 0
+  fast_dev_run: false
+  overfit_batches: 0
+  limit_train_batches: 1.0
+  limit_val_batches: 1.0
+  limit_test_batches: 1.0
+  detect_anomaly: false
+  precision: 32
+  accelerator: auto
+  num_nodes: 1
+  deterministic: false
+  inference_mode: false
+
+callbacks:
+  model_checkpoint:
+    _target_: schnetpack.train.ModelCheckpoint
+    monitor: val_loss
+    save_top_k: 1
+    save_last: true
+    mode: min
+    verbose: false
+    dirpath: checkpoints/
+    filename: '{epoch:02d}'
+    model_path: ${globals.model_path}
+  early_stopping:
+    _target_: pytorch_lightning.callbacks.EarlyStopping
+    monitor: val_loss
+    patience: 300
+    mode: min
+    min_delta: 0.0
+    check_on_train_epoch_end: false
+    check_finite: false
+  lr_monitor:
+    _target_: pytorch_lightning.callbacks.LearningRateMonitor
+    logging_interval: epoch
+  ema:
+    _target_: schnetpack.train.ExponentialMovingAverage
+    decay: 0.999
+
+task:
+  optimizer_cls: torch.optim.AdamW
+  optimizer_args:
+    lr: ${globals.lr}
+    weight_decay: 0.0
+  scheduler_cls: schnetpack.train.ReduceLROnPlateau
+  scheduler_monitor: val_loss
+  scheduler_args:
+    mode: min
+    factor: 0.5
+    patience: 150
+    threshold: 0.0
+    threshold_mode: rel
+    cooldown: 10
+    min_lr: 0.0
+    smoothing_factor: 0.0
+  _target_: morered.task.ConsitencyTask
+  warmup_steps: 0
+  time_key: ${globals.time_target_key}
+  time_hat_key: ${globals.time_hat_target_key}
+  x_t_key: ${globals.x_t_target_key}
+  x_t_hat_key: ${globals.x_t_hat_target_key}
+  outputs:
+  - _target_: schnetpack.task.ModelOutput
+    name: ${globals.mean_output_key}
+    target_property: ${globals.mean_output_key}
+    loss_fn:
+      _target_: torch.nn.MSELoss
+    metrics:
+      mse:
+        _target_: torchmetrics.regression.MeanSquaredError
+        squared: true
+    loss_weight: 1.0
+
+model:
+  _target_: morered.model.consistency.ConsistencyParameterization
+  time_key: ${globals.time_target_key}
+  input_key: ${globals.x_t_target_key}
+  output_key: ${globals.mean_output_key}
+  model:
+    _target_: schnetpack.model.NeuralNetworkPotential
+    representation:
+      radial_basis:
+        _target_: schnetpack.nn.radial.GaussianRBF
+        n_rbf: 20
+        cutoff: ${globals.cutoff}
+      _target_: schnetpack.representation.PaiNN
+      n_atom_basis: ${globals.n_atom_basis}
+      n_interactions: 3
+      shared_interactions: false
+      shared_filters: false
+      cutoff_fn:
+        _target_: schnetpack.nn.cutoff.CosineCutoff
+        cutoff: ${globals.cutoff}
+
+    input_modules:
+    - _target_: schnetpack.atomistic.PairwiseDistances
+
+    output_modules:
+    - _target_: morered.model.heads.TimeAwareEquivariant
+      n_in: ${globals.n_atom_basis}
+      n_hidden: null
+      n_layers: 3
+      output_key: ${globals.mean_output_key}
+      include_time: true
+      time_head: null
+      detach_time_head: false
+      time_key: ${globals.time_target_key}
+
+    do_postprocessing: true
+
+    postprocessors:
+    - _target_: morered.transform.BatchSubtractCenterOfMass
+      name: ${globals.mean_output_key}
+    - _target_: schnetpack.transform.CastTo64
+
+data:
+  _target_: morered.datasets.QM7X
+  datapath: ${run.data_dir}/qm7x.db
+  data_workdir: null
+  batch_size: 128
+  num_train: 4500
+  num_val: 1250
+  num_test: null
+  num_workers: 8
+  num_val_workers: null
+  num_test_workers: null
+  raw_data_path: ${run.data_dir}
+  remove_duplicates: true
+  only_equilibrium: true
+  distance_unit: Ang
+  property_units:
+    energy: eV
+  load_properties:
+  - energy
+  pin_memory: true
+  transforms:
+  - _target_: schnetpack.transform.CastTo64
+  - _target_: schnetpack.transform.SubtractCenterOfGeometry
+
+  - _target_: morered.transform.Diffuse
+    diffuse_property: ${globals.x_t_target_key}
+    diffusion_process: ${globals.diffusion_process}
+    time_key: ${globals.time_target_key}
+
+  - _target_: morered.transform.TakeProbabilityFlowStep
+    positions_key: ${globals.x_t_target_key}
+    probability_flow: ${globals.probability_flow}
+    output_key: ${globals.x_t_hat_target_key}
+    time_key: ${globals.time_target_key}
+    output_time_key: ${globals.time_hat_target_key}
+
+  - _target_: morered.transform.AllToAllNeighborList
+  - _target_: schnetpack.transform.CastTo32
+
+logger:
+  tensorboard:
+    _target_: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
+    save_dir: tensorboard/
+    name: default
+print_config: true
