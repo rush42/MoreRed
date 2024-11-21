@@ -1,6 +1,7 @@
 # @package _global_
 defaults:
   - override /task: consistency_task
+  - override /data: qm7x
   - override /callbacks:
     - checkpoint
     - earlystopping
@@ -182,6 +183,8 @@ data:
     diffusion_process: ${globals.diffusion_process}
     time_key: ${globals.time_target_key}
 
+  - _target_: morered.transform.AllToAllNeighborList
+  
   - _target_: morered.transform.TakeProbabilityFlowStep
     positions_key: ${globals.x_t_target_key}
     probability_flow: ${globals.probability_flow}
@@ -189,7 +192,6 @@ data:
     time_key: ${globals.time_target_key}
     output_time_key: ${globals.time_hat_target_key}
 
-  - _target_: morered.transform.AllToAllNeighborList
   - _target_: schnetpack.transform.CastTo32
 
 logger:
