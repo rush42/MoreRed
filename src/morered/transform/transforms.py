@@ -245,7 +245,7 @@ class TakeProbabilityFlowStep(trn.Transform):
             outputs[self.output_key] = inputs[f"original_{self.position_key}"] 
         else:
             # take on step in the probability flow.
-            _, increment = self.probaility_flow.get_increment(inputs, t)
+            _, increment = self.probability_flow.get_increment(inputs, t)
             outputs[self.output_key] = x_t - increment
 
         # decrease the time step by one for all atoms.
