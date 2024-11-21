@@ -1,6 +1,12 @@
 # @package _global_
 defaults:
   - override /task: consistency_task
+  - override /callbacks:
+    - checkpoint
+    - earlystopping
+    - lrmonitor
+    - ema
+
 
 run:
   work_dir: ${hydra:runtime.cwd}
@@ -70,32 +76,6 @@ trainer:
   num_nodes: 1
   deterministic: false
   inference_mode: false
-
-callbacks:
-  model_checkpoint:
-    _target_: schnetpack.train.ModelCheckpoint
-    monitor: val_loss
-    save_top_k: 1
-    save_last: true
-    mode: min
-    verbose: false
-    dirpath: checkpoints/
-    filename: '{epoch:02d}'
-    model_path: ${globals.model_path}
-  early_stopping:
-    _target_: pytorch_lightning.callbacks.EarlyStopping
-    monitor: val_loss
-    patience: 300
-    mode: min
-    min_delta: 0.0
-    check_on_train_epoch_end: false
-    check_finite: false
-  lr_monitor:
-    _target_: pytorch_lightning.callbacks.LearningRateMonitor
-    logging_interval: epoch
-  ema:
-    _target_: schnetpack.train.ExponentialMovingAverage
-    decay: 0.999
 
 task:
   optimizer_cls: torch.optim.AdamW
