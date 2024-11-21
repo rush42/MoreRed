@@ -339,7 +339,7 @@ class ConsitencyTask(AtomisticTask):
             x_t_key: key of the sampled positions at time t.
             x_t_hat_key: key of the computed PF ODE positions at time t - 1.
         """
-        super().__init__(**kwargs)
+        super().__init__(model=model, **kwargs)
 
         self.time_key = time_key
         self.time_hat_key = time_hat_key
