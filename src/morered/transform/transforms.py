@@ -237,22 +237,29 @@ class TakeProbabilityFlowStep(trn.Transform):
         }
 
         # get the time step from the normalized time.
-        t = self.probability_flow.diffusion_process.unnormalize_time(inputs[self.time_key])
-        assert torch.all(t == t[0])
-
+        ts = self.probability_flow.diffusion_process.unnormalize_time(inputs[self.time_key])
+        t = ts[0]
+        assert torch.all(ts == t)
+        
         # if t = 1 return the original positions. Otherwise take a probability flow step. 
-        if t[0] == 1:
+        if t == 1:
             outputs[self.output_key] = inputs[f"original_{self.position_key}"] 
         else:
+            # add idx_m to the inputs.
+            n_atoms = inputs[properties.n_atoms]
+            assert len(n_atoms) == 1
+            n_atoms = n_atoms[0].item()
+            inputs[properties.idx_m] = torch.full((n_atoms,), fill_value=0)
+
             # take on step in the probability flow.
             _, increment = self.probability_flow.get_increment(inputs, t)
             outputs[self.output_key] = x_t - increment
 
         # decrease the time step by one for all atoms.
-        outputs[self.output_time_key] = t - 1
+        outputs[self.output_time_key] = ts - 1
 
         # normalize the time step to [0,1].
-        outputs[self.output_time_key] = self.diffusion_process.normalize_time(
+        outputs[self.output_time_key] = self.probability_flow.diffusion_process.normalize_time(
             outputs[self.output_time_key]
         )
 
