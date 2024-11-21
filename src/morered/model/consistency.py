@@ -1,9 +1,9 @@
 from typing import Dict
 import torch
 from torch import nn
-
+from schnetpack.model import AtomisticModel
 __all__ = ["ConsistencyParameterization"]
-class ConsistencyParameterization(nn.Module):
+class ConsistencyParameterization(AtomisticModel):
     """
     Consistency model parameterization which enforces the boundary condition proposed by Song et al 2021.
     Uses the boundary condition f(x, epsilon) = x.
@@ -11,12 +11,13 @@ class ConsistencyParameterization(nn.Module):
 
     def __init__(
         self,
-        model: nn.Module,
+        source_model: AtomisticModel,
         input_key: str,
         output_key: str,
         time_key: str,
         epsilon: float = 1e-5,
         sigma_data: float = 0.5,
+        **kwargs,
     ):
         """
         Args:
@@ -26,15 +27,17 @@ class ConsistencyParameterization(nn.Module):
             time_key: key to use for interpolation functions.
             output_key: key to interpolate.
         """
-        super().__init__()
+        super().__init__(kwargs)
 
-        self.model = model
+        self.source_model = source_model
         self.epsilon = epsilon
         self.sigma_data = sigma_data
         self.sigma_data_sq = sigma_data ** 2
         self.time_key = time_key
         self.input_key = input_key
         self.output_key = output_key
+
+        self.collect_derivatives()
 
     def c_skip(self, t):
         return self.sigma_data_sq / (torch.square(t-self.epsilon) + self.sigma_data_sq)
@@ -49,12 +52,9 @@ class ConsistencyParameterization(nn.Module):
         c_skip = self.c_skip(t)
 
         # perform forward pass on wrapped model
-        model_out = self.model(inputs)
+        inputs[self.output_key] = self.source_model(inputs)
 
         # interpolate between model output and input
-        interpolation = model_out[self.output_key] * c_out + inputs[self.input_key] * c_skip
+        inputs[self.output_key] = inputs[self.output_key] * c_out + inputs[self.input_key] * c_skip
 
-        # update output
-        model_out[self.output_key] = interpolation
-
-        return model_out
+        return inputs
