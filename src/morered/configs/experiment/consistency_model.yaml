@@ -136,7 +136,7 @@ model:
   time_key: ${globals.time_target_key}
   input_key: ${globals.x_t_target_key}
   output_key: ${globals.mean_output_key}
-  model:
+  source_model:
     _target_: schnetpack.model.NeuralNetworkPotential
     representation:
       radial_basis:
