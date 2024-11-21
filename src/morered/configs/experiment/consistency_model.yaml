@@ -1,4 +1,6 @@
 # @package _global_
+defaults:
+  - override /task: consistency_task
 
 run:
   work_dir: ${hydra:runtime.cwd}
