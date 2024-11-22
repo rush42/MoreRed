@@ -117,3 +117,4 @@ ENV/
 # experiments
 runs/
 experiments/
+data/

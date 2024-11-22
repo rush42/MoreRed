@@ -13,7 +13,7 @@ run:
   work_dir: ${hydra:runtime.cwd}
   data_dir: ${run.work_dir}/data
   path: ${run.work_dir}/runs
-  model_dir: ${run.work_dir}/../../models
+  model_dir: ${run.work_dir}/models
   experiment: consistency_model
   id: ${uuid:1}
   ckpt_path: null
@@ -184,7 +184,7 @@ data:
     time_key: ${globals.time_target_key}
 
   - _target_: morered.transform.AllToAllNeighborList
-  
+
   - _target_: morered.transform.TakeProbabilityFlowStep
     positions_key: ${globals.x_t_target_key}
     probability_flow: ${globals.probability_flow}
