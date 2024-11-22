@@ -348,11 +348,14 @@ class ConsitencyTask(AtomisticTask):
         self.ema_decay = ema_decay
         self.loss_fn = loss_fn
 
-        self.online_model = model
-        # create a target model for the consistency task with detached parameters
-        self.target_model = copy.deepcopy(model)
+        
+        self.target_model = model
+
+        # create a online model for the consistency task and change the input keys
+        self.online_model = copy.deepcopy(model)
         for param in self.target_model.parameters():
             param.requires_grad = False
+        
 
     def setup(self, stage=None):
         """
@@ -415,10 +418,12 @@ class ConsitencyTask(AtomisticTask):
             batch_idx: batch index.
         """
 
-        target_pred = self.forward(batch)
 
-        online_batch = self._batch_hat(batch)
-        online_pred = self.forward_online(online_batch)
+        batch_hat = self._batch_hat(batch)
+        with torch.no_grad():
+            target_pred = self.forward(batch)
+
+        online_pred = self.forward_online(batch_hat)
 
         # calculate the loss between online and target prediction
         loss = self.loss_fn(online_pred, target_pred)
