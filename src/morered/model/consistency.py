@@ -52,9 +52,9 @@ class ConsistencyParameterization(AtomisticModel):
         c_skip = self.c_skip(t)
 
         # perform forward pass on wrapped model
-        inputs[self.output_key] = self.source_model(inputs)
+        inputs[self.output_key] = self.source_model(inputs)[self.output_key]
 
         # interpolate between model output and input
-        inputs[self.output_key] = inputs[self.output_key] * c_out + inputs[self.input_key] * c_skip
+        inputs[self.output_key] = inputs[self.output_key] * c_out[:, None] + inputs[self.input_key] * c_skip[:, None]
 
         return inputs
