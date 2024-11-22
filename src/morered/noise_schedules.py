@@ -219,7 +219,7 @@ class NoiseSchedule(nn.Module):
         if (t < 0).any() or (t >= self.T).any():
             raise ValueError(
                 "t must be between 0 and T-1. This may be due to rounding errors. "
-                "The indexing of the noise schedule starts with alpha_bar_1 at idnex 0."
+                "The indexing of the noise schedule starts with alpha_bar_1 at index 0."
             )
 
         return t.float() / (self.T - 1)
