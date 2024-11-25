@@ -326,10 +326,10 @@ class ConsitencyTask(AtomisticTask):
         model: nn.Module,
         time_key: str = "t",
         time_hat_key: str = "t-1",
-        x_t_key: str = '_positions',
-        x_t_hat_key: str = '_positions_hat',
-        loss_fn: nn.Module = nn.MSELoss(reduction='sum'),
-        ema_decay = 0.99,
+        x_t_key: str = "_positions",
+        x_t_hat_key: str = "_positions_hat",
+        loss_fn: nn.Module = nn.MSELoss(reduction="sum"),
+        ema_decay=0.99,
         **kwargs,
     ):
         """
@@ -348,14 +348,12 @@ class ConsitencyTask(AtomisticTask):
         self.ema_decay = ema_decay
         self.loss_fn = loss_fn
 
-        
         self.target_model = model
 
         # create a online model for the consistency task and change the input keys
         self.online_model = copy.deepcopy(model)
         for param in self.target_model.parameters():
             param.requires_grad = False
-        
 
     def setup(self, stage=None):
         """
@@ -368,8 +366,13 @@ class ConsitencyTask(AtomisticTask):
         """
         update the target model with the online model parameters.
         """
-        for target_param, online_param in zip(self.target_model.parameters(), self.online_model.parameters()):
-            target_param.data = self.ema_decay * target_param.data + (1 - self.ema_decay) * online_param.data
+        for target_param, online_param in zip(
+            self.target_model.parameters(), self.online_model.parameters()
+        ):
+            target_param.data = (
+                self.ema_decay * target_param.data
+                + (1 - self.ema_decay) * online_param.data
+            )
 
     def forward(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
@@ -382,7 +385,7 @@ class ConsitencyTask(AtomisticTask):
         pred = self.target_model(batch)
 
         return pred
-    
+
     def forward_online(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
         forward pass through the online model
@@ -394,7 +397,7 @@ class ConsitencyTask(AtomisticTask):
         pred = self.online_model(batch)
 
         return pred
-    
+
     def _batch_hat(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
         get the batch for x_t_hat and t_hat.
@@ -418,7 +421,6 @@ class ConsitencyTask(AtomisticTask):
             batch_idx: batch index.
         """
 
-
         batch_hat = self._batch_hat(batch)
         with torch.no_grad():
             target_pred = self.forward(batch)
@@ -431,8 +433,10 @@ class ConsitencyTask(AtomisticTask):
         self.log(f"train_loss", loss, on_step=True, on_epoch=False, prog_bar=False)
 
         return loss
-    
-    def _target_loss(self, batch: Dict[str, torch.Tensor], subset) -> Optional[torch.FloatTensor]:
+
+    def _target_loss(
+        self, batch: Dict[str, torch.Tensor], subset
+    ) -> Optional[torch.FloatTensor]:
         """
         evaluate the target model.
 
@@ -463,10 +467,10 @@ class ConsitencyTask(AtomisticTask):
             batch: input batch.
             batch_idx: batch index.
         """
-        loss = self._target_loss(batch, 'validation')
+        loss = self._target_loss(batch, "validation")
 
         return {"validation_loss": loss}
-    
+
     def test_step(
         self, batch: Dict[str, torch.Tensor], batch_idx: int
     ) -> Optional[torch.FloatTensor]:
@@ -477,10 +481,10 @@ class ConsitencyTask(AtomisticTask):
             batch: input batch.
             batch_idx: batch index.
         """
-        loss = self._target_loss(batch, 'test')
+        loss = self._target_loss(batch, "test")
 
         return {"test_loss": loss}
-    
+
     def on_after_backward(self):
         # update the target model with the new online model parameters
         self.update_target_model()

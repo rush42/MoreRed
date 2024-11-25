@@ -10,7 +10,12 @@ from morered.processes.base import DiffusionProcess
 from morered.sampling.probabilty_flow import ProbabilityFlow
 from morered.utils import batch_center_systems
 
-__all__ = ["AllToAllNeighborList", "BatchSubtractCenterOfMass", "Diffuse", "TakeProbabilityFlowStep"]
+__all__ = [
+    "AllToAllNeighborList",
+    "BatchSubtractCenterOfMass",
+    "Diffuse",
+    "TakeProbabilityFlowStep",
+]
 
 
 class AllToAllNeighborList(trn.NeighborListTransform):
@@ -237,12 +242,14 @@ class TakeProbabilityFlowStep(trn.Transform):
         }
 
         # get the time step from the normalized time.
-        Ts = self.probability_flow.diffusion_process.unnormalize_time(inputs[self.time_key])
+        Ts = self.probability_flow.diffusion_process.unnormalize_time(
+            inputs[self.time_key]
+        )
         t = Ts[0]
         assert torch.all(Ts == t)
 
         if t <= 1:
-            outputs[self.output_key] = inputs[f"original_{self.position_key}"] 
+            outputs[self.output_key] = inputs[f"original_{self.position_key}"]
         else:
             # save all input keys to remove all mutations done by the denoiser
             original_keys = set(inputs.keys())
@@ -264,8 +271,8 @@ class TakeProbabilityFlowStep(trn.Transform):
                     inputs.pop(key)
 
         # normalize the time step to [0,1].
-        outputs[self.output_time_key] = self.probability_flow.diffusion_process.normalize_time(
-            Ts
+        outputs[self.output_time_key] = (
+            self.probability_flow.diffusion_process.normalize_time(Ts)
         )
 
         # update the returned inputs.

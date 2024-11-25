@@ -2,7 +2,10 @@ from typing import Dict
 import torch
 from torch import nn
 from schnetpack.model import AtomisticModel
+
 __all__ = ["ConsistencyParameterization"]
+
+
 class ConsistencyParameterization(AtomisticModel):
     """
     Consistency model parameterization which enforces the boundary condition proposed by Song et al 2021.
@@ -32,7 +35,7 @@ class ConsistencyParameterization(AtomisticModel):
         self.source_model = source_model
         self.epsilon = epsilon
         self.sigma_data = sigma_data
-        self.sigma_data_sq = sigma_data ** 2
+        self.sigma_data_sq = sigma_data**2
         self.time_key = time_key
         self.input_key = input_key
         self.output_key = output_key
@@ -40,10 +43,16 @@ class ConsistencyParameterization(AtomisticModel):
         self.collect_derivatives()
 
     def c_skip(self, t):
-        return self.sigma_data_sq / (torch.square(t-self.epsilon) + self.sigma_data_sq)
-    
+        return self.sigma_data_sq / (
+            torch.square(t - self.epsilon) + self.sigma_data_sq
+        )
+
     def c_out(self, t):
-        return self.sigma_data * (t - self.epsilon) / torch.sqrt(self.sigma_data_sq + torch.square(t))
+        return (
+            self.sigma_data
+            * (t - self.epsilon)
+            / torch.sqrt(self.sigma_data_sq + torch.square(t))
+        )
 
     def forward(self, inputs: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         # calculate interpolation coefficients
@@ -55,6 +64,9 @@ class ConsistencyParameterization(AtomisticModel):
         inputs[self.output_key] = self.source_model(inputs)[self.output_key]
 
         # interpolate between model output and input
-        inputs[self.output_key] = inputs[self.output_key] * c_out[:, None] + inputs[self.input_key] * c_skip[:, None]
+        inputs[self.output_key] = (
+            inputs[self.output_key] * c_out[:, None]
+            + inputs[self.input_key] * c_skip[:, None]
+        )
 
         return inputs
