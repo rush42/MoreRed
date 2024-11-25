@@ -328,7 +328,6 @@ class ConsitencyTask(AtomisticTask):
         time_hat_key: str = "t-1",
         x_t_key: str = "_positions",
         x_t_hat_key: str = "_positions_hat",
-        loss_fn: nn.Module = nn.MSELoss(reduction="sum"),
         ema_decay=0.99,
         **kwargs,
     ):
@@ -346,12 +345,12 @@ class ConsitencyTask(AtomisticTask):
         self.x_t_key = x_t_key
         self.x_t_hat_key = x_t_hat_key
         self.ema_decay = ema_decay
-        self.loss_fn = loss_fn
+
+
+        self.online_model = copy.deepcopy(model)
 
         self.target_model = model
-
-        # create a online model for the consistency task and change the input keys
-        self.online_model = copy.deepcopy(model)
+        self.target_model.eval()
         for param in self.target_model.parameters():
             param.requires_grad = False
 
@@ -423,14 +422,15 @@ class ConsitencyTask(AtomisticTask):
 
         batch_hat = self._batch_hat(batch)
         with torch.no_grad():
-            target_pred = self.forward(batch)
+            target = self.forward(batch)
 
-        online_pred = self.forward_online(batch_hat)
+        pred = self.forward_online(batch_hat)
 
         # calculate the loss between online and target prediction
-        loss = self.loss_fn(online_pred, target_pred)
-
+        loss = self.loss_fn(pred, target)
+        print(loss)
         self.log(f"train_loss", loss, on_step=True, on_epoch=False, prog_bar=False)
+        self.log_metrics(pred, target, "train")
 
         return loss
 
@@ -445,15 +445,15 @@ class ConsitencyTask(AtomisticTask):
             batch_idx: batch index.
         """
         batch_hat = self._batch_hat(batch)
-        pred = self.forward(batch)
-        pred_hat = self.forward(batch_hat)
+        target = self.forward(batch)
+        pred = self.forward(batch_hat)
 
         # calculate the loss between online and target prediction
-        loss = self.loss_fn(pred, pred_hat)
+        loss = self.loss_fn(pred, target)
 
         # loging
-        self.log(f"validation_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
-        self.log_metrics(pred, pred_hat, subset)
+        self.log(f"{subset}_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log_metrics(pred, target, subset)
 
         return loss
 
@@ -467,9 +467,9 @@ class ConsitencyTask(AtomisticTask):
             batch: input batch.
             batch_idx: batch index.
         """
-        loss = self._target_loss(batch, "validation")
+        loss = self._target_loss(batch, "val")
 
-        return {"validation_loss": loss}
+        return {"val_loss": loss}
 
     def test_step(
         self, batch: Dict[str, torch.Tensor], batch_idx: int
