@@ -237,15 +237,17 @@ class TakeProbabilityFlowStep(trn.Transform):
         }
 
         # get the time step from the normalized time.
-        ts = self.probability_flow.diffusion_process.unnormalize_time(inputs[self.time_key])
-        t = ts[0]
-        assert torch.all(ts == t)
-        
-        # if t = 1 return the original positions. Otherwise take a probability flow step. 
-        if t == 1:
+        Ts = self.probability_flow.diffusion_process.unnormalize_time(inputs[self.time_key])
+        t = Ts[0]
+        assert torch.all(Ts == t)
+
+        if t <= 1:
             outputs[self.output_key] = inputs[f"original_{self.position_key}"] 
         else:
-            # add idx_m to the inputs.
+            # save all input keys to remove all mutations done by the denoiser
+            original_keys = set(inputs.keys())
+
+            # add idx_m to the inputs to simulate batch input.
             n_atoms = inputs[properties.n_atoms]
             assert len(n_atoms) == 1
             n_atoms = n_atoms[0].item()
@@ -254,13 +256,16 @@ class TakeProbabilityFlowStep(trn.Transform):
             # take on step in the probability flow.
             _, increment = self.probability_flow.get_increment(inputs, t)
             outputs[self.output_key] = x_t - increment
+            Ts -= 1
 
-        # decrease the time step by one for all atoms.
-        outputs[self.output_time_key] = ts - 1
+            # remove all entries that were added by the denoiser
+            for key in list(inputs.keys()):
+                if key not in original_keys:
+                    inputs.pop(key)
 
         # normalize the time step to [0,1].
         outputs[self.output_time_key] = self.probability_flow.diffusion_process.normalize_time(
-            outputs[self.output_time_key]
+            Ts
         )
 
         # update the returned inputs.
