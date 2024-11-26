@@ -177,7 +177,6 @@ class ReverseODEEuler(ReverseODE):
         self, batch: Dict[str, torch.Tensor], time_steps: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         
-        mask = time_steps == 0
 
         # get the time steps and noise predictions from the denoiser
         noise = self.inference_step(batch, time_steps)
@@ -186,13 +185,13 @@ class ReverseODEEuler(ReverseODE):
             noise, batch[properties.idx_m], time_steps[batch[properties.idx_m]]
         )
 
-        scores[mask, :] = 0
+        scores[time_steps == 0, :] = 0
 
         # perform one reverse step
         return scores
 
 
-class ReverseODEHeun(ReverseODE):
+class ReverseODEHeun(ReverseODEEuler):
     """
     Implements a 'Reverse ODE' using Heun's method.
     """
@@ -205,32 +204,23 @@ class ReverseODEHeun(ReverseODE):
         self, batch: Dict[str, torch.Tensor], time_steps: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         
-        # get the noise predictions from the denoiser and calculate the scores
-        noise = self.inference_step(batch, time_steps)
-        scores = self.diffusion_process.score_function(
-            noise, batch[properties.idx_m], time_steps[batch[properties.idx_m]]
-        )
+        x_t = batch[properties.R]
+        
+        scores_0 = super().get_increment(batch, time_steps)
 
-        # perform one reverse step to get the intermediate state
-        intermediate_state = batch.copy()
-        intermediate_state[properties.R] = batch[properties.R] - scores
-        intermediate_time_steps = time_steps.copy()
-        intermediate_time_steps[time_steps != 0] -= 1
+        # update the time for every molecule that is not at t_0
+        time_steps_1 = time_steps.copy()
+        time_steps_1[time_steps_1 != 0] -= 1
+        scores_1 = super().get_increment(batch, time_steps_1)
 
-        # get the noise predictions for the intermediate state
-        intermediate_noise = self.inference_step(
-            intermediate_state, time_steps - 1
-        )
+        # restore positions
+        batch[properties.R] = x_t
 
-        intermediate_scores = self.diffusion_process.score_function(
-            intermediate_noise,
-            batch[properties.idx_m],
-            intermediate_time_steps[batch[properties.idx_m]],
-        )
-
-        increment = 0.5 * (scores + intermediate_scores)
-        increment[time_steps == 1] = scores
-        increment[time_steps == 0, :] = 0
+        # take average of scores/gradients
+        
+        increment = 0.5 * (scores_0 + scores_1)
+        # for every molecule at t=1 we just take the first score/gradient
+        increment[time_steps == 1] = scores_0
 
         # update the batch with the averaged scores
         return increment
