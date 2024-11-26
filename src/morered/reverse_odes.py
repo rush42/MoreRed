@@ -7,15 +7,14 @@ from torch import nn
 from tqdm import tqdm
 
 from morered.processes import DiffusionProcess
-from morered.utils import compute_neighbors
+from morered.utils import compute_neighbors, scatter_mean
 
-__all__ = ["DDPM"]
+__all__ = ["ReverseODE", "ReverseODEEuler", "ReverseODEHeun"]
 
 
 class ReverseODE:
     """
-    Implements the plain DDPM ancestral sampler proposed by Ho et al. 2020
-    Subclasses the base class 'Sampler'.
+    Abstract Class for ReverseODEs.
     """
 
     def __init__(
@@ -24,7 +23,12 @@ class ReverseODE:
         denoiser: Union[str, nn.Module],
         time_key: str = "t",
         noise_pred_key: str = "eps_pred",
-        **kwargs,
+        recompute_neighbors: bool = False,
+        save_progress: bool = False,
+        progress_stride: int = 1,
+        results_on_cpu: bool = True,
+        device: Optional[torch.device] = None,
+        cutoff: Optional[float] = None,
     ):
         """
         Args:
@@ -33,9 +37,24 @@ class ReverseODE:
             time_key: the key for the time.
             noise_pred_key: the key for the noise prediction.
         """
-        super().__init__(diffusion_process, denoiser, **kwargs)
+        self.diffusion_process = diffusion_process
+        self.denoiser = denoiser
         self.time_key = time_key
         self.noise_pred_key = noise_pred_key
+        self.recompute_neighbors = recompute_neighbors
+        self.save_progress = save_progress
+        self.progress_stride = progress_stride
+        self.results_on_cpu = results_on_cpu
+        self.device = device
+        self.cutoff = cutoff
+
+        if self.device is None:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        if isinstance(denoiser, str):
+            self.denoiser = torch.load(self.denoiser, map_location=self.device).eval()
+        elif self.denoiser is not None:
+            self.denoiser = self.denoiser.to(self.device).eval()
 
     @abstractmethod
     def get_increment(
@@ -62,6 +81,26 @@ class ReverseODE:
         )
         return time_steps
 
+    def prepare_batch(self, inputs: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        # copy inputs to avoid inplace operations
+        batch = {prop: val.clone().to(self.device) for prop, val in inputs.items()}
+
+        # check if center of geometry is close to zero
+        CoG = scatter_mean(
+            batch[properties.R], batch[properties.idx_m], batch[properties.n_atoms]
+        )
+        if self.diffusion_process.invariant and (CoG > 1e-5).any():
+            raise ValueError(
+                "The input positions are not centered, "
+                "while the specified diffusion process is invariant."
+            )
+
+        # set all atoms as neighbors and compute neighbors only once before starting.
+        if not self.recompute_neighbors:
+            batch = compute_neighbors(batch, fully_connected=True, device=self.device)
+
+        return batch
+
     @torch.no_grad()
     def inference_step(
         self, inputs: Dict[str, torch.Tensor], t: torch.Tensor
@@ -71,7 +110,7 @@ class ReverseODE:
 
         Args:
             inputs: input data for noise prediction.
-            iter: the current iteration of the reverse process.
+            t: the time step for each atom.
         """
 
         # append the normalized time step to the model input
@@ -129,8 +168,8 @@ class ReverseODE:
             # update the neighbors list if required
             if self.recompute_neighbors:
                 batch = compute_neighbors(batch, cutoff=self.cutoff, device=self.device)
-            
-                    # current reverse time step
+
+                # current reverse time step
             time_steps = self.get_time_steps(inputs, i)
 
             # get the time steps and noise predictions from the denoiser
@@ -176,7 +215,8 @@ class ReverseODEEuler(ReverseODE):
     def get_increment(
         self, batch: Dict[str, torch.Tensor], time_steps: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        
+        # broadcast the time step to atoms-level
+        time_steps = time_steps[batch[properties.idx_m]]
 
         # get the time steps and noise predictions from the denoiser
         noise = self.inference_step(batch, time_steps)
@@ -203,24 +243,26 @@ class ReverseODEHeun(ReverseODEEuler):
     def get_increment(
         self, batch: Dict[str, torch.Tensor], time_steps: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        
+        # broadcast the time step to atoms-level
+        time_steps = time_steps[batch[properties.idx_m]]
+
         x_t = batch[properties.R]
-        
+
         scores_0 = super().get_increment(batch, time_steps)
 
         # update the time for every molecule that is not at t_0
-        time_steps_1 = time_steps.copy()
-        time_steps_1[time_steps_1 != 0] -= 1
+        time_steps_1 = time_steps - 1
+        time_steps_1[time_steps_1 < 0] = 0
         scores_1 = super().get_increment(batch, time_steps_1)
 
         # restore positions
         batch[properties.R] = x_t
 
         # take average of scores/gradients
-        
         increment = 0.5 * (scores_0 + scores_1)
-        # for every molecule at t=1 we just take the first score/gradient
-        increment[time_steps == 1] = scores_0
+
+        # for every molecule at t<=1 we just take the first score/gradient
+        increment[time_steps <= 1, :] = scores_0[time_steps <= 1, :]
 
         # update the batch with the averaged scores
         return increment

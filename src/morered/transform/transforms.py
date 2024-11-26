@@ -241,39 +241,23 @@ class TakeProbabilityFlowStep(trn.Transform):
             f"original_{self.position_key}": x_t,
         }
 
-        # get the time step from the normalized time.
-        Ts = self.probability_flow.diffusion_process.unnormalize_time(
-            inputs[self.time_key]
-        )
-        t = Ts[0]
-        assert torch.all(Ts == t)
+        normalize_time = self.probability_flow.diffusion_process.normalize_time
+        unnormalize_time = self.probability_flow.diffusion_process.unnormalize_time
 
-        if t <= 1:
-            outputs[self.output_key] = inputs[f"original_{self.position_key}"]
-        else:
-            # save all input keys to remove all mutations done by the denoiser
-            original_keys = set(inputs.keys())
+        # get the unnormalized time steps
+        t = unnormalize_time(inputs[self.time_key])
 
-            # add idx_m to the inputs to simulate batch input.
-            n_atoms = inputs[properties.n_atoms]
-            assert len(n_atoms) == 1
-            n_atoms = n_atoms[0].item()
-            inputs[properties.idx_m] = torch.full((n_atoms,), fill_value=0)
+        # take on step in the probability flow.
+        outputs[self.output_key] = x_t - self.probability_flow.get_increment(inputs, t)
+        outputs[t <= 1] = inputs[f"original_{self.position_key}"][t <= 1]
 
-            # take on step in the probability flow.
-            _, increment = self.probability_flow.get_increment(inputs, t)
-            outputs[self.output_key] = x_t - increment
-            Ts -= 1
-
-            # remove all entries that were added by the denoiser
-            for key in list(inputs.keys()):
-                if key not in original_keys:
-                    inputs.pop(key)
 
         # normalize the time step to [0,1].
-        outputs[self.output_time_key] = (
-            self.probability_flow.diffusion_process.normalize_time(Ts)
+        outputs[self.output_time_key][t > 0] = normalize_time(
+            t[t > 0] - 1
         )
+
+        outputs[self.output_time_key][t == 0] = 0
 
         # update the returned inputs.
         inputs.update(outputs)

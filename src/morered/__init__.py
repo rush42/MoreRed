@@ -3,6 +3,7 @@ from morered import (
     datasets,
     model,
     noise_schedules,
+    reverse_odes,
     optimization,
     transform,
     sampling,
