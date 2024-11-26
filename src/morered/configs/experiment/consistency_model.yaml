@@ -101,16 +101,18 @@ task:
   x_t_key: ${globals.x_t_target_key}
   x_t_hat_key: ${globals.x_t_hat_target_key}
   outputs:
-  - _target_: schnetpack.task.ModelOutput
-    name: ${globals.mean_output_key}
-    target_property: ${globals.mean_output_key}
-    loss_fn:
-      _target_: torch.nn.MSELoss
-    metrics:
-      mse:
-        _target_: torchmetrics.regression.MeanSquaredError
-        squared: true
-    loss_weight: 1.0
+    - _target_: morered.task.DiffModelOutput
+      name: ${globals.mean_output_key}
+      target_property: ${globals.mean_output_key}
+      loss_fn:
+        _target_: torch.nn.MSELoss
+        reduction: "sum"
+      metrics:
+        mse:
+          _target_: torchmetrics.regression.MeanSquaredError
+          squared: True
+      loss_weight: 1.0
+      nll_metric: null
 
 model:
   _target_: morered.model.consistency.ConsistencyParameterization
