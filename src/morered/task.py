@@ -5,8 +5,11 @@ from typing import Dict, Optional
 
 import torch
 from schnetpack.task import AtomisticTask, ModelOutput, UnsupervisedModelOutput
+from schnetpack.transform import CastTo32
 from torch import nn
 from torchmetrics import Metric
+
+from morered.transform.transforms import ReverseODEStepBatch
 
 log = logging.getLogger(__name__)
 
@@ -324,6 +327,7 @@ class ConsitencyTask(AtomisticTask):
     def __init__(
         self,
         model: nn.Module,
+        reverse_ode: ReverseODEStepBatch,
         time_key: str = "t",
         time_hat_key: str = "t-1",
         x_t_key: str = "_positions",
@@ -345,6 +349,7 @@ class ConsitencyTask(AtomisticTask):
         self.x_t_key = x_t_key
         self.x_t_hat_key = x_t_hat_key
         self.ema_decay = ema_decay
+        self.reverse_ode = reverse_ode
 
 
         self.online_model = copy.deepcopy(model)
@@ -353,6 +358,8 @@ class ConsitencyTask(AtomisticTask):
         self.target_model.eval()
         for param in self.target_model.parameters():
             param.requires_grad = False
+
+        self.caster = CastTo32()
 
     def setup(self, stage=None):
         """
@@ -399,14 +406,16 @@ class ConsitencyTask(AtomisticTask):
 
     def _batch_hat(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
-        get the batch for x_t_hat and t_hat.
+        generate the batch hat for the online model by appyling the reverse ODE.
 
         Args:
             batch: input batch.
         """
+
         batch_hat = copy.deepcopy(batch)
-        batch_hat[self.x_t_key] = batch_hat[self.x_t_hat_key]
-        batch_hat[self.time_key] = batch_hat[self.time_hat_key]
+        self.reverse_ode(batch_hat)
+        self.caster(batch_hat)
+
         return batch_hat
 
     def training_step(
@@ -428,7 +437,6 @@ class ConsitencyTask(AtomisticTask):
 
         # calculate the loss between online and target prediction
         loss = self.loss_fn(pred, target)
-        print(loss)
         self.log(f"train_loss", loss, on_step=True, on_epoch=False, prog_bar=False)
         self.log_metrics(pred, target, "train")
 

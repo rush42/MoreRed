@@ -46,8 +46,8 @@ globals:
     noise_key: ${globals.noise_target_key}
     dtype: float64
 
-  probability_flow:
-    _target_: morered.sampling.ProbabilityFlowHeun
+  reverse_ode:
+    _target_: morered.reverse_odes.ReverseODEEuler
     diffusion_process: ${globals.diffusion_process}
     noise_pred_key: ${globals.noise_output_key}
     time_key: ${globals.time_target_key}
@@ -68,9 +68,9 @@ trainer:
   num_sanity_val_steps: 0
   fast_dev_run: false
   overfit_batches: 0
-  limit_train_batches: 1.0
-  limit_val_batches: 1.0
-  limit_test_batches: 1.0
+  limit_train_batches: 0.1
+  limit_val_batches: 0.1
+  limit_test_batches: 0.1
   detect_anomaly: false
   precision: 32
   accelerator: auto
@@ -79,6 +79,11 @@ trainer:
   inference_mode: false
 
 task:
+  reverse_ode:
+    _target_: morered.transform.ReverseODEStepBatch
+    positions_key: ${globals.x_t_target_key}
+    reverse_ode: ${globals.reverse_ode}
+    time_key: ${globals.time_target_key}
   optimizer_cls: torch.optim.AdamW
   optimizer_args:
     lr: ${globals.lr}
@@ -186,13 +191,6 @@ data:
     time_key: ${globals.time_target_key}
 
   - _target_: morered.transform.AllToAllNeighborList
-
-  - _target_: morered.transform.TakeProbabilityFlowStep
-    positions_key: ${globals.x_t_target_key}
-    probability_flow: ${globals.probability_flow}
-    output_key: ${globals.x_t_hat_target_key}
-    time_key: ${globals.time_target_key}
-    output_time_key: ${globals.time_hat_target_key}
 
   - _target_: schnetpack.transform.CastTo32
 

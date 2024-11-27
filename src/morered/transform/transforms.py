@@ -7,14 +7,14 @@ from torch import nn
 from schnetpack import properties
 
 from morered.processes.base import DiffusionProcess
-from morered.sampling.probabilty_flow import ProbabilityFlow
+from morered.reverse_odes import ReverseODE
 from morered.utils import batch_center_systems
 
 __all__ = [
     "AllToAllNeighborList",
     "BatchSubtractCenterOfMass",
     "Diffuse",
-    "TakeProbabilityFlowStep",
+    "ReverseODEStepBatch",
 ]
 
 
@@ -187,9 +187,9 @@ class Diffuse(trn.Transform):
         return inputs
 
 
-class TakeProbabilityFlowStep(trn.Transform):
+class ReverseODEStepBatch(trn.Transform):
     """
-    Wrapper class to take a probability flow step after diffusion.
+    Wrapper class to take a reverse ODE step batch wise.
     """
 
     is_preprocessor: bool = True
@@ -198,10 +198,8 @@ class TakeProbabilityFlowStep(trn.Transform):
     def __init__(
         self,
         positions_key: str,
-        probability_flow: ProbabilityFlow,
-        output_key: Optional[str] = None,
-        time_key: str = "t",
-        output_time_key: str = "t-1",
+        time_key: str,
+        reverse_ode: ReverseODE,
     ):
         """
         Args:
@@ -213,13 +211,12 @@ class TakeProbabilityFlowStep(trn.Transform):
         """
         super().__init__()
         self.position_key = positions_key
-        self.output_key = output_key or positions_key
         self.time_key = time_key
-        self.probability_flow = probability_flow
-        self.output_time_key = output_time_key
+        self.reverse_ode = reverse_ode
+
         # Sanity check
         if (
-            not self.probability_flow.diffusion_process.invariant
+            not self.reverse_ode.diffusion_process.invariant
             and self.position_key == properties.R
         ):
             logging.error(
@@ -229,35 +226,36 @@ class TakeProbabilityFlowStep(trn.Transform):
 
     def forward(self, inputs: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
-        Define the probability flow transformation.
+        Define the reverse ODE batch transformation.
 
         Args:
             inputs: dictionary of input tensors as in SchNetPack.
         """
         x_t = inputs[self.position_key]
-
         # save the original value.
         outputs = {
             f"original_{self.position_key}": x_t,
         }
 
-        normalize_time = self.probability_flow.diffusion_process.normalize_time
-        unnormalize_time = self.probability_flow.diffusion_process.unnormalize_time
+
+        normalize_time = self.reverse_ode.diffusion_process.normalize_time
+        unnormalize_time = self.reverse_ode.diffusion_process.unnormalize_time
 
         # get the unnormalized time steps
         t = unnormalize_time(inputs[self.time_key])
 
-        # take on step in the probability flow.
-        outputs[self.output_key] = x_t - self.probability_flow.get_increment(inputs, t)
-        outputs[t <= 1] = inputs[f"original_{self.position_key}"][t <= 1]
+        # take one step of the reverse ODE.
+        outputs[self.position_key] = x_t - self.reverse_ode.get_increment(inputs, t)
+        outputs[self.position_key][t <= 1] = inputs[f"original_{self.position_key}"][t <= 1]
 
 
         # normalize the time step to [0,1].
-        outputs[self.output_time_key][t > 0] = normalize_time(
+        outputs[self.time_key] = inputs[self.time_key].float()
+        outputs[self.time_key][t > 0] = normalize_time(
             t[t > 0] - 1
         )
+        outputs[self.time_key][t == 0] = 0
 
-        outputs[self.output_time_key][t == 0] = 0
 
         # update the returned inputs.
         inputs.update(outputs)
