@@ -77,11 +77,7 @@ trainer:
   inference_mode: false
 
 task:
-  reverse_ode:
-    _target_: morered.transform.ReverseODEStepBatch
-    positions_key: ${globals.x_t_target_key}
-    reverse_ode: ${globals.reverse_ode}
-    time_key: ${globals.time_target_key}
+  reverse_ode: ${globals.reverse_ode}
   optimizer_cls: torch.optim.AdamW
   optimizer_args:
     lr: ${globals.lr}

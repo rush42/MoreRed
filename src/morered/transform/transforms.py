@@ -14,7 +14,6 @@ __all__ = [
     "AllToAllNeighborList",
     "BatchSubtractCenterOfMass",
     "Diffuse",
-    "ReverseODEStepBatch",
 ]
 
 
@@ -180,82 +179,6 @@ class Diffuse(trn.Transform):
         outputs[self.time_key] = self.diffusion_process.normalize_time(
             outputs[self.time_key]
         )
-
-        # update the returned inputs.
-        inputs.update(outputs)
-
-        return inputs
-
-
-class ReverseODEStepBatch(trn.Transform):
-    """
-    Wrapper class to take a reverse ODE step batch wise.
-    """
-
-    is_preprocessor: bool = True
-    is_postprocessor: bool = False
-
-    def __init__(
-        self,
-        positions_key: str,
-        time_key: str,
-        reverse_ode: ReverseODE,
-    ):
-        """
-        Args:
-            positions_key: key to the atom positions.
-            probability_flow: the probability flow to use.
-            output_key: key to store the succesive postions.
-                        if None, the positions_key key is used.
-            time_key: key to save the normalized diffusion time step.
-        """
-        super().__init__()
-        self.position_key = positions_key
-        self.time_key = time_key
-        self.reverse_ode = reverse_ode
-
-        # Sanity check
-        if (
-            not self.reverse_ode.diffusion_process.invariant
-            and self.position_key == properties.R
-        ):
-            logging.error(
-                "Diffusing atom positions R without invariant constraint"
-                "(invariant=False) might lead to unexpected results."
-            )
-
-    def forward(self, inputs: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
-        """
-        Define the reverse ODE batch transformation.
-
-        Args:
-            inputs: dictionary of input tensors as in SchNetPack.
-        """
-        x_t = inputs[self.position_key]
-        # save the original value.
-        outputs = {
-            f"original_{self.position_key}": x_t,
-        }
-
-
-        normalize_time = self.reverse_ode.diffusion_process.normalize_time
-        unnormalize_time = self.reverse_ode.diffusion_process.unnormalize_time
-
-        # get the unnormalized time steps
-        t = unnormalize_time(inputs[self.time_key])
-
-        # take one step of the reverse ODE.
-        outputs[self.position_key] = x_t - self.reverse_ode.get_increment(inputs, t)
-        outputs[self.position_key][t <= 1] = inputs[f"original_{self.position_key}"][t <= 1]
-
-
-        # normalize the time step to [0,1].
-        outputs[self.time_key] = inputs[self.time_key].float()
-        outputs[self.time_key][t > 0] = normalize_time(
-            t[t > 0] - 1
-        )
-        outputs[self.time_key][t == 0] = 0
-
 
         # update the returned inputs.
         inputs.update(outputs)

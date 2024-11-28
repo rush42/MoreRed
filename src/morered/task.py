@@ -9,7 +9,7 @@ from schnetpack.transform import CastTo32
 from torch import nn
 from torchmetrics import Metric
 
-from morered.transform.transforms import ReverseODEStepBatch
+from morered.reverse_odes import ReverseODE
 
 log = logging.getLogger(__name__)
 
@@ -327,10 +327,11 @@ class ConsitencyTask(AtomisticTask):
     def __init__(
         self,
         model: nn.Module,
-        reverse_ode: ReverseODEStepBatch,
+        reverse_ode: ReverseODE,
         time_key: str = "t",
         x_t_key: str = "_positions",
         ema_decay=0.99,
+        caster=CastTo32(),
         **kwargs,
     ):
         """
@@ -344,16 +345,14 @@ class ConsitencyTask(AtomisticTask):
         self.x_t_key = x_t_key
         self.ema_decay = ema_decay
         self.reverse_ode = reverse_ode
+        self.caster = caster
 
-
+        # create target and online model
         self.online_model = copy.deepcopy(model)
-
         self.target_model = model
         self.target_model.eval()
         for param in self.target_model.parameters():
             param.requires_grad = False
-
-        self.caster = CastTo32()
 
     def setup(self, stage=None):
         """
@@ -405,10 +404,30 @@ class ConsitencyTask(AtomisticTask):
         Args:
             batch: input batch.
         """
+        normalize_time = self.reverse_ode.diffusion_process.normalize_time
+        unnormalize_time = self.reverse_ode.diffusion_process.unnormalize_time
 
         batch_hat = copy.deepcopy(batch)
-        self.reverse_ode(batch_hat)
-        self.caster(batch_hat)
+        x_t = batch_hat[self.x_t_key]
+        t = unnormalize_time(batch_hat[self.time_key])
+
+        # create outputs before denoiser to presever dtypes
+        t_next = torch.zeros_like(batch[self.time_key])
+        x_t_next = batch_hat[f"original_{self.x_t_key}"]
+
+        # take one step of the reverse ODE for every t > 1
+        x_t_next[t > 1] = x_t[t > 1] - self.reverse_ode.get_increment(batch, t)[
+            t > 1
+        ].to(dtype=x_t.dtype)
+
+        # compute t-1 for all molecules
+        t_next[t > 0] = normalize_time(t[t > 0] - 1)
+
+        # update batch_hat
+        batch_hat[self.x_t_key] = x_t_next
+        batch_hat[self.time_key] = t
+
+        self.caster(batch)
 
         return batch_hat
 
