@@ -21,7 +21,7 @@ run:
 globals:
   model_path: best_model
   cutoff: 5.0
-  lr: 0.0001
+  lr: 0.00005
   n_atom_basis: 256
   noise_target_key: eps
   noise_output_key: eps_pred
@@ -68,9 +68,9 @@ trainer:
   num_sanity_val_steps: 0
   fast_dev_run: false
   overfit_batches: 0
-  limit_train_batches: 0.1
-  limit_val_batches: 0.1
-  limit_test_batches: 0.1
+  limit_train_batches: 1.0
+  limit_val_batches: 1.0
+  limit_test_batches: 1.0
   detect_anomaly: false
   precision: 32
   accelerator: auto
@@ -111,7 +111,7 @@ task:
       target_property: ${globals.mean_output_key}
       loss_fn:
         _target_: torch.nn.MSELoss
-        reduction: "sum"
+        # reduction: "sum"
       metrics:
         mse:
           _target_: torchmetrics.regression.MeanSquaredError
