@@ -27,9 +27,7 @@ globals:
   noise_output_key: eps_pred
   mean_output_key: mu_pred
   time_target_key: t
-  time_hat_target_key: 't-1'
   x_t_target_key: '_positions'
-  x_t_hat_target_key: '_positions_hat'
   denoiser_path: "${run.model_dir}/qm7x_ddpm.pt"
 
   noise_schedule:
@@ -102,9 +100,7 @@ task:
   _target_: morered.ConsitencyTask
   warmup_steps: 0
   time_key: ${globals.time_target_key}
-  time_hat_key: ${globals.time_hat_target_key}
   x_t_key: ${globals.x_t_target_key}
-  x_t_hat_key: ${globals.x_t_hat_target_key}
   outputs:
     - _target_: morered.task.DiffModelOutput
       name: ${globals.mean_output_key}

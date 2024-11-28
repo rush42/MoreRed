@@ -329,25 +329,19 @@ class ConsitencyTask(AtomisticTask):
         model: nn.Module,
         reverse_ode: ReverseODEStepBatch,
         time_key: str = "t",
-        time_hat_key: str = "t-1",
         x_t_key: str = "_positions",
-        x_t_hat_key: str = "_positions_hat",
         ema_decay=0.99,
         **kwargs,
     ):
         """
         Args:
             time_key: key of the true diffusion time step in the input dictionary.
-            time_hat_key: key of the true computed PF ODE time step in the input dictionary.
             x_t_key: key of the sampled positions at time t.
-            x_t_hat_key: key of the computed PF ODE positions at time t - 1.
         """
         super().__init__(model=model, **kwargs)
 
         self.time_key = time_key
-        self.time_hat_key = time_hat_key
         self.x_t_key = x_t_key
-        self.x_t_hat_key = x_t_hat_key
         self.ema_decay = ema_decay
         self.reverse_ode = reverse_ode
 
