@@ -32,7 +32,7 @@ globals:
 
   noise_schedule:
     _target_: morered.noise_schedules.PolynomialSchedule
-    T: 250
+    T: 1000
     s: 1.0e-05
     dtype: float64
     variance_type: lower_bound
