@@ -45,7 +45,7 @@ globals:
     dtype: float64
 
   reverse_ode:
-    _target_: morered.reverse_odes.ReverseODEHeun
+    _target_: morered.reverse_odes.ReverseODEEuler
     diffusion_process: ${globals.diffusion_process}
     noise_pred_key: ${globals.noise_output_key}
     time_key: ${globals.time_target_key}
