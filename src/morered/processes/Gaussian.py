@@ -392,12 +392,12 @@ class VPGaussianDDPM(GaussianDDPM):
             noise = batch_center_systems(noise, idx_m, None)
 
         # get alpha_bar
-        alpha_bar = self.noise_schedule(
+        sqrt_beta = self.noise_schedule(
             t,
-            keys=["alpha_bar"],
-        )["alpha_bar"]
+            keys=["sqrt_beta"],
+        )["sqrt_beta"]
 
         # compute the score function
-        score = noise * torch.sqrt(1 - alpha_bar)
+        score = noise * sqrt_beta
         
         return score
