@@ -425,7 +425,7 @@ class ConsitencyTask(AtomisticTask):
 
         # update batch_hat
         batch_hat[self.x_t_key] = x_t_next
-        batch_hat[self.time_key] = t
+        batch_hat[self.time_key] = t_next
 
         self.caster(batch)
 
