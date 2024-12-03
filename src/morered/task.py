@@ -506,7 +506,7 @@ class ConsitencyTask(AtomisticTask):
 
         return {"test_loss": loss}
 
-    def on_train_batch_end(self):
+    def on_train_batch_end(self, *args):
         # update the target model with the new online model parameters
         self.update_target_model()
         return super().on_after_backward()
