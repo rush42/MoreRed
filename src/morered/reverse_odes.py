@@ -169,7 +169,7 @@ class ReverseODE:
             if self.recompute_neighbors:
                 batch = compute_neighbors(batch, cutoff=self.cutoff, device=self.device)
 
-                # current reverse time step
+            # current reverse time step
             time_steps = self.get_time_steps(inputs, i)
 
             # get the time steps and noise predictions from the denoiser
