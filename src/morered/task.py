@@ -458,8 +458,8 @@ class ConsitencyTask(AtomisticTask):
             batch_idx: batch index.
         """
         batch_hat = self._batch_hat(batch)
-        target = self.forward(batch)
-        pred = self.forward(batch_hat)
+        target = self.forward(batch_hat)
+        pred = self.forward(batch)
 
         # calculate the loss between online and target prediction
         loss = self.loss_fn(pred, target)
