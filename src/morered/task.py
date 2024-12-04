@@ -374,7 +374,7 @@ class ConsitencyTask(AtomisticTask):
         with torch.no_grad(), self.ema.average_parameters():
             pred = self.model(batch)
 
-        return pred
+        return {k: v.detach() for k,v in pred.items()}
 
     def forward_online(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
