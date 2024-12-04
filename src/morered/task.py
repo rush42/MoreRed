@@ -348,9 +348,13 @@ class ConsitencyTask(AtomisticTask):
         self.reverse_ode = reverse_ode
         self.caster = caster
 
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
         # create target and online model
         self.model = model
+        self.model.to(device=device)
         self.ema = EMA(model.parameters(), decay=ema_decay)
+
 
     def setup(self, stage=None):
         """
