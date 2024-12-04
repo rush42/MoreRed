@@ -11,9 +11,9 @@ from morered.sampling import Sampler
 from morered.sampling.morered import MoreRedAS
 from morered.utils import compute_neighbors, scatter_mean
 
-__all__ = ["Consistency"]
+__all__ = ["ConsistencySampler"]
 
-class Consistency(MoreRedAS):
+class ConsistencySampler(MoreRedAS):
     """
     Implements the adaptive Consistency denoiser.
     """
@@ -73,7 +73,7 @@ class Consistency(MoreRedAS):
 
     @torch.no_grad()
     def inference_step(
-        self, inputs: Dict[str, torch.Tensor], iter: int
+        self, inputs: Dict[str, torch.Tensor], time_steps
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         One inference step for the model to get one time step per molecule
@@ -83,8 +83,7 @@ class Consistency(MoreRedAS):
             inputs: input data for noise prediction.
             iter: the current iteration of the reverse process.
         """
-        # get the current time steps
-        time_steps = self.get_time_steps(inputs, iter)
+
 
         # append the normalized time step to the model input
         # We first unnormlize the time steps to get a binned step as during training
@@ -102,12 +101,36 @@ class Consistency(MoreRedAS):
 
         return time_steps, mean_pred
 
+    def sample(self, inputs:  Dict[str, torch.Tensor], t: int = None, inplace: bool = False) -> Tuple[Dict[str, torch.Tensor], torch.Tensor, List[Dict[str, torch.Tensor]]]:
+        """
+        Sample from the consistency model with a single forward pass
+        
+        Args:
+            inputs: dict with input data in the SchNetPack form,
+                    including the starting x_t.
+        """
+        batch = self.prepare_batch(inputs, inplace=inplace)
+
+        if t is None:
+            t = self.get_time_steps(batch)
+        else:
+            t = torch.full_like(inputs[properties.n_atoms], fill_value=t, device=self.device)        
+
+        # get the time steps and noise predictions from the denoiser
+        _, mean = self.inference_step(batch, t)
+
+                # prepare the final output
+        x_0 = {
+            properties.R: mean
+        }
+
+        return x_0
 
     @torch.no_grad()
-    def denoise(
+    def sample_ms(
         self,
         inputs: Dict[str, torch.Tensor],
-        max_steps: Optional[int] = None,
+        iters: Optional[int] = 1,
         **kwargs,
     ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor, List[Dict[str, torch.Tensor]]]:
         """
@@ -120,12 +143,10 @@ class Consistency(MoreRedAS):
                     inluding the starting x_t.
             max_steps: the maximum number of reverse steps to perform.
         """
-        # Default maximum number of steps
-        if max_steps is None:
-            max_steps = self.diffusion_process.get_T()
 
         batch = self.prepare_batch(inputs)
-
+        idx_m = batch[properties.idx_m]
+        
         # initialize convergence flag for each molecule
         converged = torch.zeros_like(
             batch[properties.n_atoms], dtype=torch.bool, device=self.device
@@ -143,7 +164,7 @@ class Consistency(MoreRedAS):
         # simulate the reverse process
         iter = 0
         pbar = tqdm()
-        while iter < max_steps:
+        while iter < iters:
             # update the neighbors list if required
             if self.recompute_neighbors:
                 batch = compute_neighbors(batch, cutoff=self.cutoff, device=self.device)
@@ -153,21 +174,21 @@ class Consistency(MoreRedAS):
             # get the time steps and noise predictions from the denoiser
             time_steps, mean = self.inference_step(batch, iter)
 
-            # save history if required. Must be done before the reverse step.
-            if self.save_progress and (
-                iter % self.progress_stride == 0 or iter == max_steps - 1
-            ):
-                hist.append(
-                    {
-                        properties.R: batch[properties.R].cpu().float().clone(),
-                        self.time_key: time_steps.cpu(),
-                    }
-                )
+            # # save history if required. Must be done before the reverse step.
+            # if self.save_progress and (
+            #     iter % self.progress_stride == 0 or iter == iters - 1
+            # ):
+            #     hist.append(
+            #         {
+            #             properties.R: batch[properties.R].cpu().float().clone(),
+            #             self.time_key: time_steps.cpu(),
+            #         }
+            #     )
 
             # perform one reverse step
 
             # update only non-converged molecules.
-            mask_converged = converged[batch[properties.idx_m]]
+            mask_converged = converged[idx_m]
             batch[properties.R] = (
                 mask_converged.unsqueeze(-1) * batch[properties.R]
                 + (~mask_converged).unsqueeze(-1) * mean
@@ -185,10 +206,11 @@ class Consistency(MoreRedAS):
             # check if all molecules converged and end the denoising
             if converged.all():
                 break
-
-            # generate noise for the next iteration
-            x_t, _ = self.diffusion_process.diffuse(batch, time_steps)
-            batch[properties.R] = x_t
+            
+            t = torch.full_like(time_steps, fill_value=1)
+            # diffuse data for next iteration
+            diffused, _ = self.diffusion_process.diffuse(batch[properties.R], idx_m, t[idx_m])
+            batch[properties.R][~mask_converged, :] = diffused[~mask_converged, :]
 
         pbar.close()
 
