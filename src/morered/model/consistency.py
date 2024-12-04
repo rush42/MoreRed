@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional
 import torch
 from torch import nn
 from schnetpack.model import AtomisticModel
@@ -19,7 +19,7 @@ class ConsistencyParameterization(AtomisticModel):
         output_key: str,
         time_key: str,
         epsilon: float = 0,
-        sigma_data: float = 0.5,
+        sigma_data: Optional[float] = 0.5,
         **kwargs,
     ):
         """
@@ -64,7 +64,8 @@ class ConsistencyParameterization(AtomisticModel):
         model_output = self.source_model(inputs)
 
         # interpolate between model output and input
-        model_output[self.output_key] = model_output[self.output_key] * c_out + inputs[self.input_key] * c_skip
+        if self.sigma_data is not None:
+            model_output[self.output_key] = model_output[self.output_key] * c_out + inputs[self.input_key] * c_skip
         
         inputs.update(model_output)
 
