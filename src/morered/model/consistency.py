@@ -57,14 +57,14 @@ class ConsistencyParameterization(AtomisticModel):
     def forward(self, inputs: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         # calculate interpolation coefficients
         t = inputs[self.time_key]
-        c_out = self.c_out(t).unsqueeze(-1)
-        c_skip = self.c_skip(t).unsqueeze(-1)
 
         # perform forward pass on wrapped model
         model_output = self.source_model(inputs)
 
         # interpolate between model output and input
         if self.sigma_data is not None:
+            c_out = self.c_out(t).unsqueeze(-1)
+            c_skip = self.c_skip(t).unsqueeze(-1)
             model_output[self.output_key] = model_output[self.output_key] * c_out + inputs[self.input_key] * c_skip
         
         inputs.update(model_output)
