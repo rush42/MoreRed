@@ -44,7 +44,7 @@ def train(config: DictConfig):
     """
     print(header)
     log.info("Running on host: " + str(socket.gethostname()))
-
+    log.info("Run Id: " + str(config.run.id))
     if OmegaConf.is_missing(config, "run.data_dir"):
         log.error(
             "Config incomplete! You need to specify the data directory `data_dir`."
