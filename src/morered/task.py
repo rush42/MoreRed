@@ -4,6 +4,7 @@ import logging
 from typing import Dict, Optional
 
 import torch
+from torch_ema import ExponentialMovingAverage as EMA
 from schnetpack.task import AtomisticTask, ModelOutput, UnsupervisedModelOutput
 from schnetpack.transform import CastTo32
 from torch import nn
@@ -348,11 +349,8 @@ class ConsitencyTask(AtomisticTask):
         self.caster = caster
 
         # create target and online model
-        self.online_model = copy.deepcopy(model)
-        self.target_model = model
-        self.target_model.eval()
-        for param in self.target_model.parameters():
-            param.requires_grad = False
+        self.online_model = model
+        self.ema = EMA(model.parameters(), decay=ema_decay)
 
     def setup(self, stage=None):
         """
@@ -360,18 +358,6 @@ class ConsitencyTask(AtomisticTask):
         """
         # call the parent atomistic task setup
         AtomisticTask.setup(self, stage=stage)  # type: ignore
-
-    def update_target_model(self):
-        """
-        update the target model with the online model parameters.
-        """
-        for target_param, online_param in zip(
-            self.target_model.parameters(), self.online_model.parameters()
-        ):
-            target_param.data = (
-                self.ema_decay * target_param.data
-                + (1 - self.ema_decay) * online_param.data
-            )
 
     def forward(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
@@ -381,7 +367,8 @@ class ConsitencyTask(AtomisticTask):
             inputs: input batch.
         """
         # calculate the forward pass for the target model
-        pred = self.target_model(batch)
+        with torch.no_grad(), self.ema.average_parameters():
+            pred = self.model(batch)
 
         return pred
 
@@ -443,8 +430,7 @@ class ConsitencyTask(AtomisticTask):
         """
 
         batch_hat = self._batch_hat(batch)
-        with torch.no_grad():
-            target = self.forward(batch)
+        target = self.forward(batch)
 
         pred = self.forward_online(batch_hat)
 
@@ -508,5 +494,5 @@ class ConsitencyTask(AtomisticTask):
 
     def on_train_batch_end(self, *args):
         # update the target model with the new online model parameters
-        self.update_target_model()
-        return super().on_after_backward()
+        self.ema.update()
+        return super().on_train_batch_end(*args)
