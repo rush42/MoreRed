@@ -349,7 +349,7 @@ class ConsitencyTask(AtomisticTask):
         self.caster = caster
 
         # create target and online model
-        self.online_model = model
+        self.model = model
         self.ema = EMA(model.parameters(), decay=ema_decay)
 
     def setup(self, stage=None):
@@ -380,7 +380,7 @@ class ConsitencyTask(AtomisticTask):
             inputs: input batch.
         """
         # calculate the forward pass for the online model
-        pred = self.online_model(batch)
+        pred = self.model(batch)
 
         return pred
 
@@ -394,7 +394,7 @@ class ConsitencyTask(AtomisticTask):
         normalize_time = self.reverse_ode.diffusion_process.normalize_time
         unnormalize_time = self.reverse_ode.diffusion_process.unnormalize_time
 
-        batch_hat = {k: v.clone().to(device=self.device) for k, v in batch.items()}
+        batch_hat = {k: v.clone() for k, v in batch.items()}
 
         x_t = batch_hat[self.x_t_key]
         t = unnormalize_time(batch_hat[self.time_key])
@@ -431,7 +431,7 @@ class ConsitencyTask(AtomisticTask):
             batch_idx: batch index.
         """
         batch_hat = self._batch_hat(batch)
-        
+
         target = self.forward(batch)
         pred = self.forward_online(batch_hat)
 
