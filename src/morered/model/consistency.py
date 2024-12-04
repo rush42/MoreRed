@@ -35,7 +35,8 @@ class ConsistencyParameterization(AtomisticModel):
         self.source_model = source_model
         self.epsilon = epsilon
         self.sigma_data = sigma_data
-        self.sigma_data_sq = sigma_data**2
+        if sigma_data is not None:
+            self.sigma_data_sq = sigma_data**2
         self.time_key = time_key
         self.input_key = input_key
         self.output_key = output_key
