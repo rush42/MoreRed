@@ -185,9 +185,12 @@ class Sampler:
         """
         self.denoiser = model
 
-    def prepare_batch(self, inputs: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def prepare_batch(self, inputs: Dict[str, torch.Tensor], inplace: bool = False) -> Dict[str, torch.Tensor]:
         # copy inputs to avoid inplace operations
-        batch = {prop: val.clone().to(self.device) for prop, val in inputs.items()}
+        if inplace:
+            batch = inputs
+        else:
+            batch = {prop: val.clone().to(self.device) for prop, val in inputs.items()}
 
         # check if center of geometry is close to zero
         CoG = scatter_mean(

@@ -394,7 +394,8 @@ class ConsitencyTask(AtomisticTask):
         normalize_time = self.reverse_ode.diffusion_process.normalize_time
         unnormalize_time = self.reverse_ode.diffusion_process.unnormalize_time
 
-        batch_hat = copy.deepcopy(batch)
+        batch_hat = {k: v.clone().to(device=self.device) for k, v in batch.items()}
+
         x_t = batch_hat[self.x_t_key]
         t = unnormalize_time(batch_hat[self.time_key])
 
@@ -415,6 +416,7 @@ class ConsitencyTask(AtomisticTask):
         batch_hat[self.time_key] = t_next
 
         self.caster(batch)
+        self.caster(batch_hat)
 
         return batch_hat
 
@@ -428,11 +430,11 @@ class ConsitencyTask(AtomisticTask):
             batch: input batch.
             batch_idx: batch index.
         """
-
         batch_hat = self._batch_hat(batch)
+        
         target = self.forward(batch)
-
         pred = self.forward_online(batch_hat)
+
 
         # calculate the loss between online and target prediction
         loss = self.loss_fn(pred, target)

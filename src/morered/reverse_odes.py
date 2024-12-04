@@ -63,8 +63,8 @@ class ReverseODE:
         """
         Get the increment for the reverse ODE process.
         Args:
-            batch: dict with input data in the SchNetPack form
-            i: the time step of the reverse process.
+            batch: dict with input data in the SchNetPack form.
+            t: the unnormalized time step for each atom.
         """
         raise NotImplementedError
 
@@ -110,14 +110,11 @@ class ReverseODE:
 
         Args:
             inputs: input data for noise prediction.
-            t: the time step for each atom.
+            t: the unnormalized time step for each atom.
         """
 
         # append the normalized time step to the model input
         inputs[self.time_key] = self.diffusion_process.normalize_time(t)
-
-        # broadcast the time step to atoms-level
-        inputs[self.time_key] = inputs[self.time_key][inputs[properties.idx_m]]
 
         # cast input to float for the denoiser
         for key, val in inputs.items():
@@ -215,8 +212,6 @@ class ReverseODEEuler(ReverseODE):
     def get_increment(
         self, batch: Dict[str, torch.Tensor], time_steps: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        # broadcast the time step to atoms-level
-        time_steps = time_steps[batch[properties.idx_m]]
 
         # get the time steps and noise predictions from the denoiser
         noise = self.inference_step(batch, time_steps)
@@ -243,8 +238,6 @@ class ReverseODEHeun(ReverseODEEuler):
     def get_increment(
         self, batch: Dict[str, torch.Tensor], time_steps: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        # broadcast the time step to atoms-level
-        time_steps = time_steps[batch[properties.idx_m]]
 
         x_t = batch[properties.R]
 
