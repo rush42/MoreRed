@@ -25,7 +25,7 @@ class ConsistencyParameterization(AtomisticModel):
         """
         Args:
             model: model to wrap.
-            sigma_data: constant for the interpolation function.
+            sigma_data: constant for the interpolation function. When None use non-smooth/conditional parametrization.
             epsilon: small constant to avoid division by zero.
             time_key: key to use for interpolation functions.
             output_key: key to interpolate.
@@ -44,11 +44,15 @@ class ConsistencyParameterization(AtomisticModel):
         self.collect_derivatives()
 
     def c_skip(self, t):
+        if self.sigma_data is None:
+            return t == 0
         return self.sigma_data_sq / (
             torch.square(t - self.epsilon) + self.sigma_data_sq
         )
 
     def c_out(self, t):
+        if self.sigma_data is None:
+            return t != 0
         return (
             self.sigma_data
             * (t - self.epsilon)
@@ -63,10 +67,9 @@ class ConsistencyParameterization(AtomisticModel):
         model_output = self.source_model(inputs)
 
         # interpolate between model output and input
-        if self.sigma_data is not None:
-            c_out = self.c_out(t).unsqueeze(-1)
-            c_skip = self.c_skip(t).unsqueeze(-1)
-            model_output[self.output_key] = model_output[self.output_key] * c_out + inputs[self.input_key] * c_skip
+        c_out = self.c_out(t).unsqueeze(-1)
+        c_skip = self.c_skip(t).unsqueeze(-1)
+        model_output[self.output_key] = model_output[self.output_key] * c_out + inputs[self.input_key] * c_skip
         
         inputs.update(model_output)
 
