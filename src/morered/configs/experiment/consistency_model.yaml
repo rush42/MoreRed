@@ -112,7 +112,7 @@ task:
       nll_metric: null
 
 model:
-  _target_: morered.model.consistency.ConsistencyParameterization
+  _target_: morered.model.consistency_parametrization.ConsistencyParametrization
   time_key: ${globals.time_target_key}
   input_key: ${globals.x_t_target_key}
   output_key: ${globals.mean_output_key}

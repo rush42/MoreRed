@@ -3,10 +3,10 @@ import torch
 from torch import nn
 from schnetpack.model import AtomisticModel
 
-__all__ = ["ConsistencyParameterization"]
+__all__ = ["ConsistencyParametrization"]
 
 
-class ConsistencyParameterization(AtomisticModel):
+class ConsistencyParametrization(AtomisticModel):
     """
     Consistency model parameterization which enforces the boundary condition proposed by Song et al 2021.
     Uses the boundary condition f(x, epsilon) = x.

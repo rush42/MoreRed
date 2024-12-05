@@ -1,2 +1,2 @@
 from . import heads
-from . import consistency
+from . import consistency_parametrization
