@@ -182,6 +182,7 @@ data:
     diffuse_property: ${globals.x_t_target_key}
     diffusion_process: ${globals.diffusion_process}
     time_key: ${globals.time_target_key}
+    include_t0: false
 
   - _target_: morered.transform.AllToAllNeighborList
 

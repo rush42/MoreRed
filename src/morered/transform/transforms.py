@@ -112,6 +112,7 @@ class Diffuse(trn.Transform):
         diffuse_property: str,
         diffusion_process: DiffusionProcess,
         output_key: Optional[str] = None,
+        include_t0: bool = True,
         time_key: str = "t",
     ):
         """
@@ -127,6 +128,7 @@ class Diffuse(trn.Transform):
         self.diffusion_process = diffusion_process
         self.output_key = output_key
         self.time_key = time_key
+        self.include_t0 = include_t0
 
         # Sanity check
         if (
@@ -155,7 +157,7 @@ class Diffuse(trn.Transform):
 
         # sample one training time step for the input molecule.
         t = torch.randint(
-            0,
+            0 if self.include_t0 else 1,
             self.diffusion_process.get_T(),
             size=(1,),
             dtype=torch.long,
