@@ -423,31 +423,8 @@ class ConsitencyTask(AtomisticTask):
         self.caster(batch_hat)
 
         return batch_hat
-
-    def training_step(
-        self, batch: Dict[str, torch.Tensor], batch_idx: int
-    ) -> Optional[torch.FloatTensor]:
-        """
-        define the training step for pytorch lightning.
-
-        Args:
-            batch: input batch.
-            batch_idx: batch index.
-        """
-        batch_hat = self._batch_hat(batch)
-
-        target = self.forward(batch)
-        pred = self.forward_online(batch_hat)
-
-
-        # calculate the loss between online and target prediction
-        loss = self.loss_fn(pred, target)
-        self.log(f"train_loss", loss, on_step=True, on_epoch=False, prog_bar=False)
-        self.log_metrics(pred, target, "train")
-
-        return loss
-
-    def _target_loss(
+    
+    def _step(
         self, batch: Dict[str, torch.Tensor], subset
     ) -> Optional[torch.FloatTensor]:
         """
@@ -458,17 +435,37 @@ class ConsitencyTask(AtomisticTask):
             batch_idx: batch index.
         """
         batch_hat = self._batch_hat(batch)
-        target = self.forward(batch_hat)
-        pred = self.forward(batch)
+
+        target = self.forward(batch)
+        if subset != "test":
+            pred = self.forward_online(batch_hat)
+        else:
+            pred = self.forward(batch_hat)
 
         # calculate the loss between online and target prediction
         loss = self.loss_fn(pred, target)
 
         # loging
-        self.log(f"{subset}_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        is_train = subset == "train"
+        self.log(f"{subset}_loss", loss, on_step=is_train, on_epoch=not is_train, prog_bar=not is_train)
         self.log_metrics(pred, target, subset)
 
         return loss
+    
+    def training_step(
+        self, batch: Dict[str, torch.Tensor], batch_idx: int
+    ) -> Optional[torch.FloatTensor]:
+        """
+        define the training step for pytorch lightning.
+
+        Args:
+            batch: input batch.
+            batch_idx: batch index.
+        """
+        loss = self._step(batch, "train")
+
+        return loss
+
 
     def validation_step(
         self, batch: Dict[str, torch.Tensor], batch_idx: int
@@ -480,7 +477,7 @@ class ConsitencyTask(AtomisticTask):
             batch: input batch.
             batch_idx: batch index.
         """
-        loss = self._target_loss(batch, "val")
+        loss = self._step(batch, "val")
 
         return {"val_loss": loss}
 
@@ -494,7 +491,7 @@ class ConsitencyTask(AtomisticTask):
             batch: input batch.
             batch_idx: batch index.
         """
-        loss = self._target_loss(batch, "test")
+        loss = self._step(batch, "test")
 
         return {"test_loss": loss}
 
