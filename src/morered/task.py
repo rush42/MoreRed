@@ -436,11 +436,13 @@ class ConsitencyTask(AtomisticTask):
         """
         batch_hat = self._batch_hat(batch)
 
-        target = self.forward(batch)
-        if subset != "test":
-            pred = self.forward_online(batch_hat)
-        else:
-            pred = self.forward(batch_hat)
+        target = self.forward(batch_hat)
+        pred = self.forward_online(batch)
+        
+        # if subset != "test":
+        #     pred = self.forward_online(batch)
+        # else:
+        #     pred = self.forward(batch)
 
         # calculate the loss between online and target prediction
         loss = self.loss_fn(pred, target)
