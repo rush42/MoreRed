@@ -458,7 +458,7 @@ class ConsitencyTask(AtomisticTask):
         return loss
     
     def training_step(
-        self, batch: Dict[str, torch.Tensor], batch_idx: int
+        self, batch: Dict[str, torch.Tensor], batch_idx: int, skip_referenceless_batches: bool = True
     ) -> Optional[torch.FloatTensor]:
         """
         define the training step for pytorch lightning.
@@ -467,6 +467,13 @@ class ConsitencyTask(AtomisticTask):
             batch: input batch.
             batch_idx: batch index.
         """
+        if skip_referenceless_batches and (batch[self.time_key] == 0).any().item():
+            log.warning(
+                f"Training batch is without original reference batch_idx {batch_idx} and training step "
+                f"{self.global_step}, training step will be skipped!"
+            )
+            return None
+        
         loss = self._step(batch, "train")
 
         return loss
