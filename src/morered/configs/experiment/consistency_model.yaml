@@ -77,6 +77,7 @@ trainer:
   inference_mode: false
 
 task:
+  _target_: morered.ConsitencyTask
   reverse_ode: ${globals.reverse_ode}
   optimizer_cls: torch.optim.AdamW
   optimizer_args:
@@ -93,7 +94,6 @@ task:
     cooldown: 10
     min_lr: 0.0
     smoothing_factor: 0.0
-  _target_: morered.ConsitencyTask
   warmup_steps: 0
   time_key: ${globals.time_target_key}
   x_t_key: ${globals.x_t_target_key}
