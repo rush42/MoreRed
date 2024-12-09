@@ -331,8 +331,10 @@ class ConsitencyTask(AtomisticTask):
         reverse_ode: ReverseODE,
         time_key: str = "t",
         x_t_key: str = "_positions",
-        ema_decay=0.999,
+        ema_decay=0.9999,
         caster=CastTo32(),
+        skip_exploding_batches: bool = True, 
+        skip_referenceless_batches: bool = True,
         **kwargs,
     ):
         """
@@ -347,6 +349,8 @@ class ConsitencyTask(AtomisticTask):
         self.ema_decay = ema_decay
         self.reverse_ode = reverse_ode
         self.caster = caster
+        self.skip_exploding_batches = skip_exploding_batches
+        self.skip_referenceless_batches = skip_referenceless_batches
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -458,7 +462,7 @@ class ConsitencyTask(AtomisticTask):
         return loss
     
     def training_step(
-        self, batch: Dict[str, torch.Tensor], batch_idx: int, skip_referenceless_batches: bool = True
+        self, batch: Dict[str, torch.Tensor], batch_idx: int
     ) -> Optional[torch.FloatTensor]:
         """
         define the training step for pytorch lightning.
@@ -467,7 +471,7 @@ class ConsitencyTask(AtomisticTask):
             batch: input batch.
             batch_idx: batch index.
         """
-        if skip_referenceless_batches and (batch[self.time_key] == 0).any().item():
+        if self.skip_referenceless_batches and (batch[self.time_key] == 0).any().item():
             log.warning(
                 f"Training batch is without original reference batch_idx {batch_idx} and training step "
                 f"{self.global_step}, training step will be skipped!"
@@ -476,6 +480,16 @@ class ConsitencyTask(AtomisticTask):
         
         loss = self._step(batch, "train")
 
+        # skip exploding batches in backward pass
+        if self.skip_exploding_batches and (
+            torch.isnan(loss) or torch.isinf(loss) or loss > 1e10
+        ):
+            log.warning(
+                f"Loss is {loss} for train batch_idx {batch_idx} and training step "
+                f"{self.global_step}, training step will be skipped!"
+            )
+            return None
+        
         return loss
 
 
