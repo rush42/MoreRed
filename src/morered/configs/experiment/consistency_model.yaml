@@ -6,7 +6,6 @@ defaults:
     - checkpoint
     - earlystopping
     - lrmonitor
-    - ema
 
 
 run:
