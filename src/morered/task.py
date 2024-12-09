@@ -331,7 +331,7 @@ class ConsitencyTask(AtomisticTask):
         reverse_ode: ReverseODE,
         time_key: str = "t",
         x_t_key: str = "_positions",
-        ema_decay=0.99,
+        ema_decay=0.999,
         caster=CastTo32(),
         **kwargs,
     ):
