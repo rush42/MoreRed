@@ -62,6 +62,7 @@ trainer:
   accumulate_grad_batches: 1
   val_check_interval: 1.0
   check_val_every_n_epoch: 1
+  # log_every_n_steps: 1
   num_sanity_val_steps: 0
   fast_dev_run: false
   overfit_batches: 0
@@ -121,11 +122,11 @@ model:
     representation:
       radial_basis:
         _target_: schnetpack.nn.radial.GaussianRBF
-        n_rbf: 20
+        n_rbf: 256
         cutoff: ${globals.cutoff}
       _target_: schnetpack.representation.PaiNN
       n_atom_basis: ${globals.n_atom_basis}
-      n_interactions: 3
+      n_interactions: 12
       shared_interactions: false
       shared_filters: false
       cutoff_fn:
