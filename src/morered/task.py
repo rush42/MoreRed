@@ -439,6 +439,9 @@ class ConsitencyTask(AtomisticTask):
         target = self.forward(batch_hat)
         pred = self.forward_online(batch)
         
+        pred_order = torch.log10(pred["mu_pred"].norm())
+        self.log("out_order", pred_order, on_epoch=True)
+        
         # if subset != "test":
         #     pred = self.forward_online(batch)
         # else:
