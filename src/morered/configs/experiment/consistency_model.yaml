@@ -80,6 +80,7 @@ task:
   _target_: morered.ConsitencyTask
   reverse_ode: ${globals.reverse_ode}
   optimizer_cls: torch.optim.AdamW
+  ema_decay: 0.99
   optimizer_args:
     lr: ${globals.lr}
     weight_decay: 0.0
