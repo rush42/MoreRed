@@ -3,6 +3,7 @@ import inspect
 import logging
 from typing import Dict, Optional
 
+from morered.utils import compute_neighbors
 import torch
 from torch_ema import ExponentialMovingAverage as EMA
 from schnetpack.task import AtomisticTask, ModelOutput, UnsupervisedModelOutput
@@ -333,6 +334,8 @@ class ConsitencyTask(AtomisticTask):
         x_t_key: str = "_positions",
         ema_decay=0.9999,
         caster=CastTo32(),
+        cutoff: float = 500.,
+        recompute_neighbors: bool = True,
         skip_exploding_batches: bool = True, 
         skip_referenceless_batches: bool = True,
         **kwargs,
@@ -349,6 +352,8 @@ class ConsitencyTask(AtomisticTask):
         self.ema_decay = ema_decay
         self.reverse_ode = reverse_ode
         self.caster = caster
+        self.cutoff = cutoff
+        self.recompute_neighbors = recompute_neighbors
         self.skip_exploding_batches = skip_exploding_batches
         self.skip_referenceless_batches = skip_referenceless_batches
 
@@ -425,6 +430,9 @@ class ConsitencyTask(AtomisticTask):
 
         self.caster(batch)
         self.caster(batch_hat)
+        
+        if self.recompute_neighbors:
+            batch_hat = compute_neighbors(batch_hat, cutoff=self.cutoff, device=self.device)
 
         return batch_hat
     
