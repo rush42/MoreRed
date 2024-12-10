@@ -1,12 +1,10 @@
 import copy
 import inspect
 import logging
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 
-from morered.processes.base import DiffusionProcess
 import torch
 from torch_ema import ExponentialMovingAverage as EMA
-from schnetpack import properties
 from schnetpack.task import AtomisticTask, ModelOutput, UnsupervisedModelOutput
 from schnetpack.transform import CastTo32
 from torch import nn
@@ -330,7 +328,6 @@ class ConsitencyTask(AtomisticTask):
     def __init__(
         self,
         model: nn.Module,
-        diffusion_process: DiffusionProcess,
         reverse_ode: ReverseODE,
         time_key: str = "t",
         x_t_key: str = "_positions",
@@ -350,7 +347,6 @@ class ConsitencyTask(AtomisticTask):
         self.time_key = time_key
         self.x_t_key = x_t_key
         self.ema_decay = ema_decay
-        self.diffusion_process = diffusion_process
         self.reverse_ode = reverse_ode
         self.caster = caster
         self.skip_exploding_batches = skip_exploding_batches
@@ -396,33 +392,6 @@ class ConsitencyTask(AtomisticTask):
 
         return pred
 
-    def _diffuse_batch(self, batch: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:
-        x_0 = batch[self.x_t_key]
-        device = x_0.device
-
-        # sample one training time step for the input molecule.
-        t = torch.randint(
-            1,
-            self.diffusion_process.get_T(),
-            size=(batch[properties.n_atoms],),
-            dtype=torch.long,
-            device=device,
-        )
-
-        if (t == 0).any().item() == False:
-            properties.
-
-        # diffuse the property.
-        x_t = self.diffusion_process.diffuse(
-            x_0,
-            idx_m=None,
-            t=t,
-            return_dict=True,
-            output_key=self.output_key or self.diffuse_property,
-        )
-
-        return x_t, t
-        
     def _batch_hat(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
         generate the batch hat for the online model by appyling the reverse ODE.
