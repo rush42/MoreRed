@@ -30,8 +30,9 @@ globals:
   denoiser_path: "${run.model_dir}/qm7x_ddpm.pt"
 
   noise_schedule:
-    _target_: morered.noise_schedules.PolynomialSchedule
+    _target_: morered.noise_schedules.CosineSchedule
     T: 64
+    v: 2.5
     s: 1.0e-05
     dtype: float64
     variance_type: lower_bound
