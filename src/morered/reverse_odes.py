@@ -74,7 +74,7 @@ class ReverseODE:
     ) -> torch.Tensor:
         # current reverse time step
         time_steps = torch.full_like(
-            inputs[properties.n_atoms],
+            inputs[properties.idx_m],
             fill_value=iter,
             dtype=torch.long,
             device=self.device,
