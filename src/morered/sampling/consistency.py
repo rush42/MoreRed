@@ -22,7 +22,7 @@ class ConsistencySampler(MoreRedAS):
         self,
         diffusion_process: DiffusionProcess,
         mean_predictor: Union[str, nn.Module],
-        time_predictor: Union[str, nn.Module],
+        time_predictor: Union[None, str, nn.Module] = None,
         time_key: str = "t",
         time_pred_key: str = "t_pred",
         mean_pred_key: str = "mu_pred",
@@ -57,18 +57,18 @@ class ConsistencySampler(MoreRedAS):
 
         if self.device is None:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
         if isinstance(self.mean_predictor, str):
             self.mean_predictor = torch.load(self.mean_predictor, map_location=self.device).eval()
         elif self.mean_predictor is not None:
             self.mean_predictor = self.mean_predictor.to(self.device).eval()
-
-        if isinstance(self.time_predictor, str):
-            self.time_predictor = torch.load(
-                self.time_predictor, device=self.device
-            ).eval()
-        else:
-            self.time_predictor = self.time_predictor.to(self.device).eval()
+        
+        if  self.time_predictor is not None:
+            if isinstance(self.time_predictor, str):
+                self.time_predictor = torch.load(
+                    self.time_predictor, device=self.device
+                ).eval()
+            else:
+                self.time_predictor = self.time_predictor.to(self.device).eval()
 
 
     @torch.no_grad()
@@ -99,7 +99,7 @@ class ConsistencySampler(MoreRedAS):
         model_out = self.mean_predictor(inputs)
         mean_pred = model_out[self.mean_pred_key].detach()
 
-        return time_steps, mean_pred
+        return mean_pred
 
     def sample(self, inputs:  Dict[str, torch.Tensor], t: int = None, inplace: bool = False) -> Tuple[Dict[str, torch.Tensor], torch.Tensor, List[Dict[str, torch.Tensor]]]:
         """
@@ -117,7 +117,7 @@ class ConsistencySampler(MoreRedAS):
             t = torch.full_like(inputs[properties.n_atoms], fill_value=t, device=self.device)        
 
         # get the time steps and noise predictions from the denoiser
-        _, mean = self.inference_step(batch, t)
+        mean = self.inference_step(batch, t)
 
                 # prepare the final output
         x_0 = {
@@ -171,8 +171,9 @@ class ConsistencySampler(MoreRedAS):
 
             batch[properties.R] += noise
 
+            t = self.get_time_steps(batch, iter)
             # get the time steps and noise predictions from the denoiser
-            time_steps, mean = self.inference_step(batch, iter)
+            mean = self.inference_step(batch, t)
 
             # # save history if required. Must be done before the reverse step.
             # if self.save_progress and (
@@ -195,7 +196,7 @@ class ConsistencySampler(MoreRedAS):
             )
 
             # use the average time step for convergence check
-            converged = converged | (time_steps <= self.convergence_step)
+            converged = converged | (t <= self.convergence_step)
 
             iter += 1
             pbar.update(1)
@@ -207,10 +208,10 @@ class ConsistencySampler(MoreRedAS):
             if converged.all():
                 break
             
-            t = torch.full_like(time_steps, fill_value=1)
-            # diffuse data for next iteration
-            diffused, _ = self.diffusion_process.diffuse(batch[properties.R], idx_m, t[idx_m])
-            batch[properties.R][~mask_converged, :] = diffused[~mask_converged, :]
+            # t = torch.full_like(t, fill_value=1)
+            # # diffuse data for next iteration
+            # diffused, _ = self.diffusion_process.diffuse(batch[properties.R], idx_m, t[idx_m])
+            # batch[properties.R][~mask_converged, :] = diffused[~mask_converged, :]
 
         pbar.close()
 
