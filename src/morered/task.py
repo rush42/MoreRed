@@ -486,7 +486,7 @@ class ConsitencyTask(AtomisticTask):
             batch: input batch.
             batch_idx: batch index.
         """
-        if self.skip_referenceless_batches and (batch[self.time_key] == 0).any().item():
+        if self.skip_referenceless_batches and not (batch[self.time_key] == 1).any().item():
             log.warning(
                 f"Training batch is without original reference batch_idx {batch_idx} and training step "
                 f"{self.global_step}, training step will be skipped!"
