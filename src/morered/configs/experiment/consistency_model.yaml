@@ -124,11 +124,11 @@ model:
     representation:
       radial_basis:
         _target_: schnetpack.nn.radial.GaussianRBF
-        n_rbf: 256
+        n_rbf: 20
         cutoff: ${globals.cutoff}
       _target_: schnetpack.representation.PaiNN
       n_atom_basis: ${globals.n_atom_basis}
-      n_interactions: 12
+      n_interactions: 3
       shared_interactions: false
       shared_filters: false
       cutoff_fn:
