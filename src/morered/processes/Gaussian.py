@@ -371,7 +371,6 @@ class VPGaussianDDPM(GaussianDDPM):
     def score_function(
         self,
         noise: torch.Tensor,
-        idx_m: Optional[torch.Tensor],
         t: torch.Tensor,
     ) -> torch.Tensor:
         """
@@ -384,15 +383,11 @@ class VPGaussianDDPM(GaussianDDPM):
         # convert to correct dtype
         noise = noise.to(self.dtype)
 
-        # if invariant, center the noise to zero center of geometry.
-        # Safeguard if model prediction was not centered.
-        if self.invariant:
-            noise = batch_center_systems(noise, idx_m, None)
-
         # get alpha_bar
         alpha_bar = self.noise_schedule(
             t,
             keys=["alpha_bar"],
         )["alpha_bar"]
         coefficients = 1 / torch.sqrt(1 - alpha_bar)
+
         return noise * coefficients.unsqueeze(-1)

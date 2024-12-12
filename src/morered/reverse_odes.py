@@ -56,17 +56,25 @@ class ReverseODE:
         elif self.denoiser is not None:
             self.denoiser = self.denoiser.to(self.device).eval()
 
-    @abstractmethod
-    def get_increment(
-        self, batch: Dict[str, torch.Tensor], t: torch.Tensor
+    def get_drift(
+        self, x_t: torch.Tensor, t: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Get the increment for the reverse ODE process.
-        Args:
-            batch: dict with input data in the SchNetPack form.
-            t: the unnormalized time step for each atom.
-        """
-        raise NotImplementedError
+        sqrt_alphas = self.diffusion_process.noise_schedule(
+            t, keys=["sqrt_alpha"]
+        )["sqrt_alpha"]
+
+        return (2 - sqrt_alphas).unsqueeze(-1) * x_t
+
+    def get_diffusion(
+        self, noise: torch.Tensor, t: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+
+        scores = self.diffusion_process.score_function(noise, t)
+
+        scores[t == 0, :] = 0
+        betas = self.diffusion_process.noise_schedule(t, keys=["beta"])["beta"]
+
+        return 1 / 2 * betas.unsqueeze(-1) * scores
 
     @torch.no_grad()
     def get_time_steps(
@@ -106,7 +114,7 @@ class ReverseODE:
         self, inputs: Dict[str, torch.Tensor], t: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        One inference step for the model to get the time steps and noise prediction.
+        One inference step for the model to get x_t_next.
 
         Args:
             inputs: input data for noise prediction.
@@ -123,11 +131,16 @@ class ReverseODE:
 
         # forward pass through the denoiser
         model_out = self.denoiser(inputs)
-
         # fetch the noise prediction
         noise_pred = model_out[self.noise_pred_key].detach()
 
-        return noise_pred
+        x_t = inputs[properties.R]
+        
+        x_t_next = self.get_drift(x_t, t) - self.get_diffusion(
+            noise_pred, t
+        )
+
+        return x_t_next
 
     def denoise(
         self,
@@ -161,7 +174,7 @@ class ReverseODE:
         hist = []
 
         # simulate the reverse process
-        for i in tqdm(range(t - 1, -1, -1)):
+        for i in tqdm(range(t - 1, 0, -1)):
             # update the neighbors list if required
             if self.recompute_neighbors:
                 batch = compute_neighbors(batch, cutoff=self.cutoff, device=self.device)
@@ -169,8 +182,7 @@ class ReverseODE:
             # current reverse time step
             time_steps = self.get_time_steps(inputs, i)
 
-            # get the time steps and noise predictions from the denoiser
-            increment = self.get_increment(batch, time_steps)
+            x_t_next = self.inference_step(batch, time_steps)
 
             # save history if required. Must be done before the reverse step.
             if self.save_progress and (i % self.progress_stride == 0):
@@ -182,7 +194,7 @@ class ReverseODE:
                 )
 
             # update the state
-            batch[properties.R] -= increment
+            batch[properties.R] = x_t_next
 
         # prepare the final output
         x_0 = {
@@ -198,64 +210,3 @@ class ReverseODE:
         )
 
         return x_0, num_steps, hist
-
-
-class ReverseODEEuler(ReverseODE):
-    """
-    Implements a 'Reverse ODE' using Euler's method.
-    """
-
-    def __init__(self, *args, **kwargs):
-        # Pass all arguments to the `DDPM` constructor
-        super().__init__(*args, **kwargs)
-
-    def get_increment(
-        self, batch: Dict[str, torch.Tensor], time_steps: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-
-        # get the time steps and noise predictions from the denoiser
-        noise = self.inference_step(batch, time_steps)
-
-        scores = self.diffusion_process.score_function(
-            noise, batch[properties.idx_m], time_steps[batch[properties.idx_m]]
-        )
-
-        scores[time_steps == 0, :] = 0
-
-        # perform one reverse step
-        return scores
-
-
-class ReverseODEHeun(ReverseODEEuler):
-    """
-    Implements a 'Reverse ODE' using Heun's method.
-    """
-
-    def __init__(self, *args, **kwargs):
-        # Pass all arguments to the `DDPM` constructor
-        super().__init__(*args, **kwargs)
-
-    def get_increment(
-        self, batch: Dict[str, torch.Tensor], time_steps: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-
-        x_t = batch[properties.R]
-
-        scores_0 = super().get_increment(batch, time_steps)
-
-        # update the time for every molecule that is not at t_0
-        time_steps_1 = time_steps - 1
-        time_steps_1[time_steps_1 < 0] = 0
-        scores_1 = super().get_increment(batch, time_steps_1)
-
-        # restore positions
-        batch[properties.R] = x_t
-
-        # take average of scores/gradients
-        increment = 0.5 * (scores_0 + scores_1)
-
-        # for every molecule at t<=1 we just take the first score/gradient
-        increment[time_steps <= 1, :] = scores_0[time_steps <= 1, :]
-
-        # update the batch with the averaged scores
-        return increment
