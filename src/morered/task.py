@@ -436,10 +436,10 @@ class ConsitencyTask(AtomisticTask):
         self.caster(batch)
         self.caster(batch_hat)
 
-        if self.recompute_neighbors:
-            batch_hat = compute_neighbors(
-                batch_hat, cutoff=self.cutoff, device=self.device
-            )
+        # if self.recompute_neighbors:
+        #     batch_hat = compute_neighbors(
+        #         batch_hat, cutoff=self.cutoff, device=self.device
+        #     )
 
         return batch_hat
 
