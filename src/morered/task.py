@@ -417,7 +417,7 @@ class ConsitencyTask(AtomisticTask):
         x_t_next = batch_hat[f"original_{self.x_t_key}"]
 
         # take one step of the reverse ODE for every t > 1
-        x_t_next[t > 1] = x_t[t > 1] - self.reverse_ode.get_increment(batch, t)[
+        x_t_next[t > 1] = self.reverse_ode.inference_step(batch, t)[
             t > 1
         ].to(dtype=x_t.dtype)
 
