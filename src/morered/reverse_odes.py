@@ -76,7 +76,7 @@ class ReverseODE:
         time_steps = torch.full_like(
             inputs[properties.idx_m],
             fill_value=iter,
-            dtype=torch.long,
+            dtype=torch.int64,
             device=self.device,
         )
         return time_steps
