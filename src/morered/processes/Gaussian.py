@@ -384,20 +384,15 @@ class VPGaussianDDPM(GaussianDDPM):
         # convert to correct dtype
         noise = noise.to(self.dtype)
 
-        noise, t = _check_shapes(noise, t)
-
         # if invariant, center the noise to zero center of geometry.
         # Safeguard if model prediction was not centered.
         if self.invariant:
             noise = batch_center_systems(noise, idx_m, None)
 
         # get alpha_bar
-        sqrt_beta = self.noise_schedule(
+        alpha_bar = self.noise_schedule(
             t,
-            keys=["sqrt_beta"],
-        )["sqrt_beta"]
-
-        # compute the score function
-        score = noise * sqrt_beta
-        
-        return score
+            keys=["alpha_bar"],
+        )["alpha_bar"]
+        coefficients = 1 / torch.sqrt(1 - alpha_bar)
+        return noise * coefficients.unsqueeze(-1)
