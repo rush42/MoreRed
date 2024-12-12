@@ -45,7 +45,7 @@ globals:
     dtype: float64
 
   reverse_ode:
-    _target_: morered.reverse_odes.ReverseODEEuler
+    _target_: morered.reverse_odes.ReverseODE
     diffusion_process: ${globals.diffusion_process}
     noise_pred_key: ${globals.noise_output_key}
     time_key: ${globals.time_target_key}
@@ -124,7 +124,7 @@ model:
     representation:
       radial_basis:
         _target_: schnetpack.nn.radial.GaussianRBF
-        n_rbf: 20
+        n_rbf: 50
         cutoff: ${globals.cutoff}
       _target_: schnetpack.representation.PaiNN
       n_atom_basis: ${globals.n_atom_basis}
