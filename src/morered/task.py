@@ -334,9 +334,9 @@ class ConsitencyTask(AtomisticTask):
         x_t_key: str = "_positions",
         ema_decay=0.9999,
         caster=CastTo32(),
-        cutoff: float = 500.,
+        cutoff: float = 500.0,
         recompute_neighbors: bool = True,
-        skip_exploding_batches: bool = True, 
+        skip_exploding_batches: bool = True,
         skip_referenceless_batches: bool = True,
         **kwargs,
     ):
@@ -364,7 +364,6 @@ class ConsitencyTask(AtomisticTask):
         self.model.to(device=device)
         self.ema = EMA(model.parameters(), decay=ema_decay)
 
-
     def setup(self, stage=None):
         """
         overwrite the pytorch lightning task setup function.
@@ -383,7 +382,7 @@ class ConsitencyTask(AtomisticTask):
         with torch.no_grad(), self.ema.average_parameters():
             pred = self.model(batch)
 
-        return {k: v.detach() for k,v in pred.items()}
+        return {k: v.detach() for k, v in pred.items()}
 
     def forward_online(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
@@ -417,9 +416,9 @@ class ConsitencyTask(AtomisticTask):
         x_t_next = batch_hat[f"original_{self.x_t_key}"]
 
         # take one step of the reverse ODE for every t > 1
-        x_t_next[t > 1] = self.reverse_ode.inference_step(batch, t)[
-            t > 1
-        ].to(dtype=x_t.dtype)
+        x_t_next[t > 1] = self.reverse_ode.inference_step(batch, t)[t > 1].to(
+            dtype=x_t.dtype
+        )
 
         # compute t-1 for all molecules
         t_next[t > 0] = normalize_time(t[t > 0] - 1)
@@ -430,12 +429,14 @@ class ConsitencyTask(AtomisticTask):
 
         self.caster(batch)
         self.caster(batch_hat)
-        
+
         if self.recompute_neighbors:
-            batch_hat = compute_neighbors(batch_hat, cutoff=self.cutoff, device=self.device)
+            batch_hat = compute_neighbors(
+                batch_hat, cutoff=self.cutoff, device=self.device
+            )
 
         return batch_hat
-    
+
     def _step(
         self, batch: Dict[str, torch.Tensor], subset
     ) -> Optional[torch.FloatTensor]:
@@ -450,10 +451,10 @@ class ConsitencyTask(AtomisticTask):
 
         target = self.forward(batch_hat)
         pred = self.forward_online(batch)
-        
+
         norm_magnitude = torch.log10(pred["mu_pred"].detach().norm())
         self.log("norm_magnitude", norm_magnitude, on_epoch=True)
-        
+
         # if subset != "test":
         #     pred = self.forward_online(batch)
         # else:
@@ -464,11 +465,17 @@ class ConsitencyTask(AtomisticTask):
 
         # loging
         is_train = subset == "train"
-        self.log(f"{subset}_loss", loss, on_step=is_train, on_epoch=not is_train, prog_bar=not is_train)
+        self.log(
+            f"{subset}_loss",
+            loss,
+            on_step=is_train,
+            on_epoch=not is_train,
+            prog_bar=not is_train,
+        )
         self.log_metrics(pred, target, subset)
 
         return loss
-    
+
     def training_step(
         self, batch: Dict[str, torch.Tensor], batch_idx: int
     ) -> Optional[torch.FloatTensor]:
@@ -485,7 +492,7 @@ class ConsitencyTask(AtomisticTask):
                 f"{self.global_step}, training step will be skipped!"
             )
             return None
-        
+
         loss = self._step(batch, "train")
 
         # skip exploding batches in backward pass
@@ -497,9 +504,8 @@ class ConsitencyTask(AtomisticTask):
                 f"{self.global_step}, training step will be skipped!"
             )
             return None
-        
-        return loss
 
+        return loss
 
     def validation_step(
         self, batch: Dict[str, torch.Tensor], batch_idx: int

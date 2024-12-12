@@ -59,9 +59,9 @@ class ReverseODE:
     def get_drift(
         self, x_t: torch.Tensor, t: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        sqrt_alphas = self.diffusion_process.noise_schedule(
-            t, keys=["sqrt_alpha"]
-        )["sqrt_alpha"]
+        sqrt_alphas = self.diffusion_process.noise_schedule(t, keys=["sqrt_alpha"])[
+            "sqrt_alpha"
+        ]
 
         return (2 - sqrt_alphas).unsqueeze(-1) * x_t
 
@@ -135,10 +135,8 @@ class ReverseODE:
         noise_pred = model_out[self.noise_pred_key].detach()
 
         x_t = inputs[properties.R]
-        
-        x_t_next = self.get_drift(x_t, t) - self.get_diffusion(
-            noise_pred, t
-        )
+
+        x_t_next = self.get_drift(x_t, t) - self.get_diffusion(noise_pred, t)
 
         return x_t_next
 
