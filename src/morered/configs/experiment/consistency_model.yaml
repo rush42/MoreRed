@@ -110,7 +110,7 @@ task:
       metrics:
         mse:
           _target_: torchmetrics.regression.MeanSquaredError
-          squared: True
+          squared: true
       loss_weight: 1.0
       nll_metric: null
 
