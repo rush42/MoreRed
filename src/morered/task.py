@@ -429,6 +429,9 @@ class ConsitencyTask(AtomisticTask):
         self.model.to(device=device)
         self.ema = EMA(model.parameters(), decay=ema_decay)
 
+        self.normalize_time = self.reverse_ode.diffusion_process.normalize_time
+        self.unnormalize_time = self.reverse_ode.diffusion_process.unnormalize_time
+
     def setup(self, stage=None):
         """
         overwrite the pytorch lightning task setup function.
@@ -468,13 +471,10 @@ class ConsitencyTask(AtomisticTask):
         Args:
             batch: input batch.
         """
-        normalize_time = self.reverse_ode.diffusion_process.normalize_time
-        unnormalize_time = self.reverse_ode.diffusion_process.unnormalize_time
-
         batch_hat = {k: v.clone() for k, v in batch.items()}
 
         x_t = batch_hat[self.x_t_key]
-        t = unnormalize_time(batch_hat[self.time_key])
+        t = self.unnormalize_time(batch_hat[self.time_key])
 
         # create outputs before denoiser to presever dtypes
         t_next = torch.zeros_like(batch[self.time_key])
@@ -487,7 +487,7 @@ class ConsitencyTask(AtomisticTask):
         )
 
         # compute t-1 for all molecules
-        t_next[t > 0] = normalize_time(t[t > 0] - 1)
+        t_next[t > 0] = self.normalize_time(t[t > 0] - 1)
 
         # update batch_hat
         batch_hat[self.x_t_key] = x_t_next
