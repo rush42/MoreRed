@@ -168,7 +168,7 @@ class Diffuse(trn.Transform):
 
         if self.t1_bonus != 0:
             if (torch.rand(size=(1,)) < self.t1_bonus).all():
-                t = 1
+                t[0] = 1
 
         # diffuse the property.
         tmp = self.diffusion_process.diffuse(
