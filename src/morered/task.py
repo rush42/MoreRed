@@ -320,6 +320,65 @@ class DiffusionTask(AtomisticTask):
         return {"test_loss": loss}
 
 
+class ConsistencyModelOutput(ModelOutput):
+    """
+    define consistency output head.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        weight_fn: Optional[callable],
+        weight_property: Optional[str],
+        **kwargs,
+    ):
+        """
+        Args:
+            name: name of the output.
+            weight_fn: the weight function to weight each sample based on target[weight_property].
+            weight_property: the property name to use for the weight function.
+        """
+        super().__init__(name=name, **kwargs)
+
+        self.weight_fn = weight_fn
+        self.weight_property = weight_property
+        if weight_fn is not None and weight_property is None:
+            raise Exception("weight_fn given but weight_key is None")
+
+    def calculate_loss(
+        self, pred: Dict[str, torch.Tensor], target: Dict[str, torch.Tensor]
+    ) -> torch.Tensor:
+        """
+        calculate the loss.
+
+        Args:
+            pred: outputs.
+            target: target values.
+        """
+        if self.loss_weight == 0 or self.loss_fn is None:
+            return torch.tensor(0.0)
+
+        # extract the extra arguments of the loss function if needed
+        args_ = inspect.getfullargspec(self.loss_fn).args[2:]
+        kwargs = {k: pred[k] for k in args_ if k in pred}
+
+        # calculate the loss using the extra arguments if needed
+        if kwargs:
+            loss_samplewise = self.loss_fn(
+                pred[self.name], target[self.target_property], reduction='none', **kwargs
+            )
+        else:
+            loss_samplewise = self.loss_fn(
+                pred[self.name], target[self.target_property], reduction='none'
+            )
+
+        if self.weight_fn is not None:
+            loss_samplewise *= self.weight_fn(target[self.weight_property]) 
+
+        loss = torch.mean(loss_samplewise)
+
+        return self.loss_weight * loss
+    
 class ConsitencyTask(AtomisticTask):
     """
     Defines the consitency task for pytorch lightning as proposed by Song et al 2021.
@@ -422,7 +481,8 @@ class ConsitencyTask(AtomisticTask):
         x_t_next = batch_hat[f"original_{self.x_t_key}"]
 
         # take one step of the reverse ODE for every t > 1
-        x_t_next[t > 1] = self.reverse_ode.inference_step(batch, t)[t > 1].to(
+        input = {k: v.clone() for k, v in batch.items()}
+        x_t_next[t > 1] = self.reverse_ode.inference_step(input, t)[t > 1].to(
             dtype=x_t.dtype
         )
 
@@ -432,9 +492,6 @@ class ConsitencyTask(AtomisticTask):
         # update batch_hat
         batch_hat[self.x_t_key] = x_t_next
         batch_hat[self.time_key] = t_next
-
-        self.caster(batch)
-        self.caster(batch_hat)
 
         # if self.recompute_neighbors:
         #     batch_hat = compute_neighbors(
