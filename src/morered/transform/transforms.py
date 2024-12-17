@@ -114,6 +114,7 @@ class Diffuse(trn.Transform):
         output_key: Optional[str] = None,
         include_t0: bool = True,
         time_key: str = "t",
+        t1_bonus: int = 0.0, 
     ):
         """
         Args:
@@ -129,6 +130,7 @@ class Diffuse(trn.Transform):
         self.output_key = output_key
         self.time_key = time_key
         self.include_t0 = include_t0
+        self.t1_bonus = t1_bonus
 
         # Sanity check
         if (
@@ -163,6 +165,10 @@ class Diffuse(trn.Transform):
             dtype=torch.long,
             device=device,
         )
+
+        if self.t1_bonus != 0:
+            if (torch.rand(size=(1,)) < self.t1_bonus).all():
+                t = 1
 
         # diffuse the property.
         tmp = self.diffusion_process.diffuse(
