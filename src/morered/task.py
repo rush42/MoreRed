@@ -3,9 +3,10 @@ import inspect
 import logging
 from typing import Dict, Optional
 
-from morered.utils import compute_neighbors
+from morered.utils import compute_neighbors, find_optimal_permutation
 import torch
 from torch_ema import ExponentialMovingAverage as EMA
+from schnetpack import properties
 from schnetpack.task import AtomisticTask, ModelOutput, UnsupervisedModelOutput
 from schnetpack.transform import CastTo32
 from torch import nn
@@ -328,8 +329,9 @@ class ConsistencyModelOutput(ModelOutput):
     def __init__(
         self,
         name: str,
-        weight_fn: Optional[callable],
-        weight_property: Optional[str],
+        permutation_invariant: bool = True,
+        weight_fn: Optional[callable] = None,
+        weight_property: Optional[str] = None,
         **kwargs,
     ):
         """
@@ -342,6 +344,7 @@ class ConsistencyModelOutput(ModelOutput):
 
         self.weight_fn = weight_fn
         self.weight_property = weight_property
+        self.permutation_invariant = permutation_invariant
         if weight_fn is not None and weight_property is None:
             raise Exception("weight_fn given but weight_key is None")
 
@@ -362,23 +365,31 @@ class ConsistencyModelOutput(ModelOutput):
         args_ = inspect.getfullargspec(self.loss_fn).args[2:]
         kwargs = {k: pred[k] for k in args_ if k in pred}
 
-        # calculate the loss using the extra arguments if needed
-        if kwargs:
-            loss_samplewise = self.loss_fn(
-                pred[self.name], target[self.target_property], reduction='none', **kwargs
-            )
-        else:
-            loss_samplewise = self.loss_fn(
-                pred[self.name], target[self.target_property], reduction='none'
-            )
+        if self.permutation_invariant:
+            permutation = find_optimal_permutation(pred, target)
 
-        if self.weight_fn is not None:
-            loss_samplewise *= self.weight_fn(target[self.weight_property]) 
+        loss = self.loss_fn(
+            pred[self.name], target[self.target_property][permutation], **kwargs
+        )
 
-        loss = torch.mean(loss_samplewise)
+        # # calculate the loss using the extra arguments if needed
+        # if kwargs:
+        #     loss_samplewise = self.loss_fn(
+        #         pred[self.name], target[self.target_property][permutation], reduction='none', **kwargs
+        #     )
+        # else:
+        #     loss_samplewise = self.loss_fn(
+        #         pred[self.name], target[self.target_property][permutation], reduction='none'
+        #     )
+
+        # if self.weight_fn is not None:
+        #     loss_samplewise *= self.weight_fn(target[self.weight_property])
+
+        # loss = torch.mean(loss_samplewise)
 
         return self.loss_weight * loss
-    
+
+
 class ConsitencyTask(AtomisticTask):
     """
     Defines the consitency task for pytorch lightning as proposed by Song et al 2021.
@@ -418,8 +429,6 @@ class ConsitencyTask(AtomisticTask):
         self.skip_referenceless_batches = skip_referenceless_batches
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
 
         if initialize_with_denoiser:
             model.source_model.load_state_dict(self.reverse_ode.denoiser.state_dict())
