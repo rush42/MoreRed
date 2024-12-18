@@ -6,6 +6,7 @@ defaults:
     - checkpoint
     # - earlystopping
     - lrmonitor
+    # - sampling
 
 
 run:
@@ -66,7 +67,7 @@ trainer:
   # log_every_n_steps: 1
   num_sanity_val_steps: 0
   fast_dev_run: false
-  overfit_batches: 0
+  overfit_batches: 20
   limit_train_batches: 1.0
   limit_val_batches: 1.0
   limit_test_batches: 1.0
@@ -91,7 +92,7 @@ task:
   scheduler_args:
     mode: min
     factor: 0.5
-    patience: 300
+    patience: 150
     threshold: 0.0
     threshold_mode: rel
     cooldown: 10
@@ -101,18 +102,16 @@ task:
   time_key: ${globals.time_target_key}
   x_t_key: ${globals.x_t_target_key}
   outputs:
-    - _target_: morered.task.DiffModelOutput
+    - _target_: morered.task.ConsistencyModelOutput
       name: ${globals.mean_output_key}
       target_property: ${globals.mean_output_key}
       loss_fn:
         _target_: torch.nn.MSELoss
-        # reduction: "sum"
       metrics:
         mse:
           _target_: torchmetrics.regression.MeanSquaredError
           squared: true
       loss_weight: 1.0
-      nll_metric: null
 
 model:
   _target_: morered.model.consistency_parametrization.ConsistencyParametrization
@@ -198,3 +197,18 @@ logger:
     save_dir: tensorboard/
     name: default
 print_config: true
+
+sampler:
+  _target_: morered.sampling.ConsistencySampler
+  diffusion_process: ${globals.diffusion_process}
+  denoiser: null
+
+callbacks:
+  sampling:
+    t: 30
+    max_steps: 1
+    start_epoch: 0
+    every_n_epochs: 10
+    log_rmsd: True
+  early_stopping:
+    patience: 1000

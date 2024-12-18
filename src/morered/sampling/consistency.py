@@ -21,7 +21,7 @@ class ConsistencySampler(MoreRedAS):
     def __init__(
         self,
         diffusion_process: DiffusionProcess,
-        mean_predictor: Union[str, nn.Module],
+        denoiser: Union[str, nn.Module],
         time_predictor: Union[None, str, nn.Module] = None,
         time_key: str = "t",
         time_pred_key: str = "t_pred",
@@ -37,12 +37,12 @@ class ConsistencySampler(MoreRedAS):
         """
         Args:
             diffusion_process: The diffusion processe to sample the target property.
-            mean_predictor: mean predictor or path to mean predictor to use for the reverse process.
+            denoiser: mean predictor or path to mean predictor to use for the reverse process.
             time_predictor: Seperate diffusion time step predictor or path to the model.
                             Used for 'MoreRed-ITP' and 'MoreRed-AS'.
         """
         self.diffusion_process = diffusion_process
-        self.mean_predictor = mean_predictor
+        self.denoiser = denoiser
         self.time_predictor = time_predictor
         self.mean_pred_key = mean_pred_key
         self.time_pred_key = time_pred_key
@@ -57,10 +57,10 @@ class ConsistencySampler(MoreRedAS):
 
         if self.device is None:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        if isinstance(self.mean_predictor, str):
-            self.mean_predictor = torch.load(self.mean_predictor, map_location=self.device).eval()
-        elif self.mean_predictor is not None:
-            self.mean_predictor = self.mean_predictor.to(self.device).eval()
+        if isinstance(self.denoiser, str):
+            self.denoiser = torch.load(self.denoiser, map_location=self.device).eval()
+        elif self.denoiser is not None:
+            self.denoiser = self.denoiser.to(self.device).eval()
         
         if  self.time_predictor is not None:
             if isinstance(self.time_predictor, str):
@@ -96,7 +96,7 @@ class ConsistencySampler(MoreRedAS):
                 inputs[key] = val.float()
 
         # fetch the noise prediction
-        model_out = self.mean_predictor(inputs)
+        model_out = self.denoiser(inputs)
         mean_pred = model_out[self.mean_pred_key].detach()
 
         return mean_pred
