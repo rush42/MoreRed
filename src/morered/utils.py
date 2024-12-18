@@ -413,7 +413,7 @@ def find_optimal_permutation(
     find the optimal permutation for target s.t. the distances between pred and target gets minimized.
     returns the permutation to allign target with pred.
     """
-    intType = torch.int
+    intType = torch.int64
     inf = torch.iinfo(intType).max
 
     batch_permutation = torch.full_like(pred[properties.idx_m], fill_value=0, dtype=intType)
@@ -427,7 +427,7 @@ def find_optimal_permutation(
         # get the positions and atomic numbers for target and predicton
         R = pred[properties.R][molecule_mask].detach()
         Z = pred[properties.Z][molecule_mask].detach()
-        R_0 = target[molecule_mask].detach()
+        R_0 = target[properties.R][molecule_mask].detach()
         Z_0 = target[properties.Z][molecule_mask].detach()
 
         # distance[i, j] = |R[i] - R_0[j]|
@@ -441,7 +441,7 @@ def find_optimal_permutation(
         _, molecule_permutation = linear_sum_assignment(distances)
 
         # add the shifed molecule permutation to the bach permutation
-        batch_permutation[molecule_mask] = molecule_permutation + offset
+        batch_permutation[molecule_mask] = torch.from_numpy(molecule_permutation) + offset
         offset += n_atoms
 
     return batch_permutation
