@@ -435,7 +435,7 @@ def find_optimal_permutation(
         # charge_matches[i, j] = Z[i] == Z_0[j]
         charge_matches = Z.unsqueeze(1) == Z_0.unsqueeze(0)
 
-        # set distances between different atoms to "infinity"
+        # set distances between atoms that have different nuclear charge to "infinity"
         distances[~charge_matches] = inf
 
         _, molecule_permutation = linear_sum_assignment(distances)

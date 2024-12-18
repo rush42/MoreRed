@@ -367,10 +367,13 @@ class ConsistencyModelOutput(ModelOutput):
 
         if self.permutation_invariant:
             permutation = find_optimal_permutation(pred, target)
-
-        loss = self.loss_fn(
-            pred[self.name], target[self.target_property][permutation], **kwargs
-        )
+            loss = self.loss_fn(
+                pred[self.name], target[self.target_property][permutation], **kwargs
+            )
+        else:
+            loss = self.loss_fn(
+                pred[self.name], target[self.target_property][permutation], **kwargs
+            )
 
         # # calculate the loss using the extra arguments if needed
         # if kwargs:
