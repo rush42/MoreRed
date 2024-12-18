@@ -116,8 +116,6 @@ class ConsistencySampler(MoreRedAS):
         else:
             t = torch.full_like(inputs[properties.n_atoms], fill_value=t, device=self.device)        
 
-        print(t)
-        print(t.shape)
 
         hist = [
             {
