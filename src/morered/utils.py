@@ -416,7 +416,7 @@ def find_optimal_permutation(
     intType = torch.int
     inf = torch.iinfo(intType).max
 
-    batch_permutation = torch.full_like(pred[properties.idx_m], dtype=intType)
+    batch_permutation = torch.full_like(pred[properties.idx_m], fill_value=0, dtype=intType)
 
     offset = 0
     # loop over molecules/systems
