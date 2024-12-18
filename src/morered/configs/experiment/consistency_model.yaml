@@ -91,7 +91,7 @@ task:
   scheduler_args:
     mode: min
     factor: 0.5
-    patience: 150
+    patience: 300
     threshold: 0.0
     threshold_mode: rel
     cooldown: 10
@@ -186,6 +186,7 @@ data:
     diffusion_process: ${globals.diffusion_process}
     time_key: ${globals.time_target_key}
     include_t0: false
+    t1_bonus: 0.0
 
   - _target_: morered.transform.AllToAllNeighborList
 
