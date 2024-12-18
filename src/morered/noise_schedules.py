@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Union
+from typing import Callable, Dict, Union
 
 import numpy as np
 import torch
@@ -300,6 +300,10 @@ class NoiseSchedule(nn.Module):
 
         return params
 
+    def as_function(self, key: str) -> Callable[[torch.Tensor], torch.Tensor]:
+        def fn(t: torch.Tensor) -> torch.Tensor:
+            return self.forward(t, [key])[key]
+        return fn
 
 class CosineSchedule(NoiseSchedule):
     """
