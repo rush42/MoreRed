@@ -116,15 +116,40 @@ class ConsistencySampler(MoreRedAS):
         else:
             t = torch.full_like(inputs[properties.n_atoms], fill_value=t, device=self.device)        
 
-        # get the time steps and noise predictions from the denoiser
-        mean = self.inference_step(batch, t)
+        print(t)
+        print(t.shape)
 
-                # prepare the final output
+        hist = [
+            {
+                properties.R: inputs[properties.R].cpu().float().clone(),
+                self.time_key: t
+            }
+        ]
+
+        # get the time predicted mean from the consistency denoiser
         x_0 = {
-            properties.R: mean
+            properties.R: self.inference_step(batch, t)
         }
 
-        return x_0
+        hist.append({
+                properties.R: inputs[properties.R].cpu().float().clone(),
+                self.time_key: torch.full_like(t, fill_value=0)
+            }
+        )
+
+        
+        return x_0, torch.tensor(1), hist
+
+    @torch.no_grad()
+    def denoise(
+        self,
+        inputs: Dict[str, torch.Tensor],
+        t: Optional[int] = None,
+        **kwargs,
+    ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor, List[Dict[str, torch.Tensor]]]:
+        
+        return self.sample(inputs, t)
+
 
     @torch.no_grad()
     def sample_ms(
