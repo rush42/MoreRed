@@ -11,6 +11,7 @@ from ase.data import chemical_symbols, covalent_radii
 from schnetpack import properties
 from schnetpack.data.loader import _atoms_collate_fn
 from tqdm import tqdm
+from scipy.optimize import linear_sum_assignment
 
 import morered as mrd
 from morered.bonds import allowed_bonds_dict, bonds1, bonds2, bonds3
@@ -403,3 +404,44 @@ def generate_bonds_data(save_path: Optional[str] = None, overwrite: bool = False
         pickle.dump(data, f)
 
     return data
+
+
+def find_optimal_permutation(
+    pred: Dict[str, torch.Tensor], target: Dict[str, torch.Tensor]
+) -> torch.Tensor:
+    """
+    find the optimal permutation for target s.t. the distances between pred and target gets minimized.
+    returns the permutation to allign target with pred.
+    """
+    intType = torch.int
+    inf = torch.iinfo(intType).max
+
+    batch_permutation = torch.full_like(pred[properties.idx_m], dtype=intType)
+
+    offset = 0
+    # loop over molecules/systems
+    for m_idx, n_atoms in enumerate(pred[properties.n_atoms]):
+        # get the indices of the current molecule
+        molecule_mask = target[properties.idx_m] == m_idx
+
+        # get the positions and atomic numbers for target and predicton
+        R = pred[properties.R][molecule_mask].detach()
+        Z = pred[properties.Z][molecule_mask].detach()
+        R_0 = target[molecule_mask].detach()
+        Z_0 = target[properties.Z][molecule_mask].detach()
+
+        # distance[i, j] = |R[i] - R_0[j]|
+        distances = (R.unsqueeze(1) - R_0.unsqueeze(0)).norm(dim=2)
+        # charge_matches[i, j] = Z[i] == Z_0[j]
+        charge_matches = Z.unsqueeze(1) == Z_0.unsqueeze(0)
+
+        # set distances between different atoms to "infinity"
+        distances[~charge_matches] = inf
+
+        _, molecule_permutation = linear_sum_assignment(distances)
+
+        # add the shifed molecule permutation to the bach permutation
+        batch_permutation[molecule_mask] = molecule_permutation + offset
+        offset += n_atoms
+
+    return batch_permutation
