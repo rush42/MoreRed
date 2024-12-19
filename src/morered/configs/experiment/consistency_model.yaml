@@ -161,7 +161,7 @@ data:
   _target_: morered.datasets.QM7X
   datapath: ${run.data_dir}/qm7x.db
   data_workdir: null
-  batch_size: 128
+  batch_size: 192
   num_train: 4500
   num_val: 1250
   num_test: null
