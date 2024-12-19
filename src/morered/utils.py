@@ -413,6 +413,7 @@ def find_optimal_permutation(
     find the optimal permutation for target s.t. the distances between pred and target gets minimized.
     returns the permutation to allign target with pred.
     """
+    device = target[properties.R].device
     intType = torch.int64
     inf = torch.iinfo(intType).max
 
@@ -438,10 +439,10 @@ def find_optimal_permutation(
         # set distances between atoms that have different nuclear charge to "infinity"
         distances[~charge_matches] = inf
 
-        _, molecule_permutation = linear_sum_assignment(distances)
+        _, molecule_permutation = linear_sum_assignment(distances.cpu())
 
         # add the shifed molecule permutation to the bach permutation
-        batch_permutation[molecule_mask] = torch.from_numpy(molecule_permutation) + offset
+        batch_permutation[molecule_mask] = torch.from_numpy(molecule_permutation).to(device) + offset
         offset += n_atoms
 
     return batch_permutation
