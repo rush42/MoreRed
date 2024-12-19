@@ -6,7 +6,7 @@ defaults:
     - checkpoint
     # - earlystopping
     - lrmonitor
-    # - sampling
+    - sampling
 
 
 run:
