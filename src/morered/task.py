@@ -372,7 +372,7 @@ class ConsistencyModelOutput(ModelOutput):
             )
         else:
             loss = self.loss_fn(
-                pred[self.name], target[self.target_property][permutation], **kwargs
+                pred[self.name], target[self.target_property], **kwargs
             )
 
         # # calculate the loss using the extra arguments if needed
