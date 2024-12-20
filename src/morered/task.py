@@ -3,6 +3,7 @@ import inspect
 import logging
 from typing import Dict, Optional
 
+from morered.noise_schedules import NoiseSchedule
 from morered.utils import compute_neighbors, find_optimal_permutation
 import torch
 from torch_ema import ExponentialMovingAverage as EMA
@@ -330,7 +331,7 @@ class ConsistencyModelOutput(ModelOutput):
         self,
         name: str,
         permutation_invariant: bool = True,
-        weight_fn: Optional[callable] = None,
+        noise_schedule: Optional[NoiseSchedule] = None,
         weight_property: Optional[str] = None,
         **kwargs,
     ):
@@ -342,11 +343,12 @@ class ConsistencyModelOutput(ModelOutput):
         """
         super().__init__(name=name, **kwargs)
 
-        self.weight_fn = weight_fn
         self.weight_property = weight_property
         self.permutation_invariant = permutation_invariant
-        if weight_fn is not None and weight_property is None:
-            raise Exception("weight_fn given but weight_key is None")
+        self.weight_property = weight_property
+        self.noise_schedule = noise_schedule
+        if weight_property is not None and noise_schedule is None:
+            raise Exception("weight_property given but noise_schedule is None")
 
     def calculate_loss(
         self, pred: Dict[str, torch.Tensor], target: Dict[str, torch.Tensor]
@@ -369,22 +371,13 @@ class ConsistencyModelOutput(ModelOutput):
             permutation = find_optimal_permutation(pred, target)
             target[self.target_property] = target[self.target_property][permutation]
 
-        loss = self.loss_fn(pred[self.name], target[self.target_property], **kwargs)
+        loss_samplewise = self.loss_fn(pred[self.name], target[self.target_property], **kwargs)
 
-        # # calculate the loss using the extra arguments if needed
-        # if kwargs:
-        #     loss_samplewise = self.loss_fn(
-        #         pred[self.name], target[self.target_property], reduction='none', **kwargs
-        #     )
-        # else:
-        #     loss_samplewise = self.loss_fn(
-        #         pred[self.name], target[self.target_property], reduction='none'
-        #     )
+        if self.weight_property is not None:
+            weights = self.noise_schedule(target.t, [self.weight_property])[self.weight_property]
+            loss_samplewise *= weights
 
-        # if self.weight_fn is not None:
-        #     loss_samplewise *= self.weight_fn(target[self.weight_property])
-
-        # loss = torch.mean(loss_samplewise)
+        loss = torch.mean(loss_samplewise)
 
         return self.loss_weight * loss
 
