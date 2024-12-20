@@ -367,22 +367,18 @@ class ConsistencyModelOutput(ModelOutput):
 
         if self.permutation_invariant:
             permutation = find_optimal_permutation(pred, target)
-            loss = self.loss_fn(
-                pred[self.name], target[self.target_property][permutation], **kwargs
-            )
-        else:
-            loss = self.loss_fn(
-                pred[self.name], target[self.target_property], **kwargs
-            )
+            target[self.target_property] = target[self.target_property][permutation]
+
+        loss = self.loss_fn(pred[self.name], target[self.target_property], **kwargs)
 
         # # calculate the loss using the extra arguments if needed
         # if kwargs:
         #     loss_samplewise = self.loss_fn(
-        #         pred[self.name], target[self.target_property][permutation], reduction='none', **kwargs
+        #         pred[self.name], target[self.target_property], reduction='none', **kwargs
         #     )
         # else:
         #     loss_samplewise = self.loss_fn(
-        #         pred[self.name], target[self.target_property][permutation], reduction='none'
+        #         pred[self.name], target[self.target_property], reduction='none'
         #     )
 
         # if self.weight_fn is not None:
@@ -529,7 +525,7 @@ class ConsitencyTask(AtomisticTask):
 
         # forward pass of x_t-1 with the target model
         target = self.forward(batch_hat)
- 
+
         # forward pass of x_t with either online or target model depending on the step
         if is_train:
             pred = self.forward_online(batch)
@@ -539,7 +535,7 @@ class ConsitencyTask(AtomisticTask):
         # calculate the loss between online and target prediction
         loss = self.loss_fn(pred, target)
 
-        #logging
+        # logging
         self.log(
             f"{subset}_loss",
             loss,
