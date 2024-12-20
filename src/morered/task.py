@@ -522,24 +522,24 @@ class ConsitencyTask(AtomisticTask):
             batch: input batch.
             batch_idx: batch index.
         """
+        is_train = subset == "train"
+
+        # get batch_hat which is one step down the probability flow
         batch_hat = self._batch_hat(batch)
 
+        # forward pass of x_t-1 with the target model
         target = self.forward(batch_hat)
-        pred = self.forward_online(batch)
-
-        norm_magnitude = torch.log10(pred["mu_pred"].detach().norm())
-        self.log("norm_magnitude", norm_magnitude, on_epoch=True)
-
-        # if subset != "test":
-        #     pred = self.forward_online(batch)
-        # else:
-        #     pred = self.forward(batch)
+ 
+        # forward pass of x_t with either online or target model depending on the step
+        if is_train:
+            pred = self.forward_online(batch)
+        else:
+            pred = self.forward(batch)
 
         # calculate the loss between online and target prediction
         loss = self.loss_fn(pred, target)
 
-        # loging
-        is_train = subset == "train"
+        #logging
         self.log(
             f"{subset}_loss",
             loss,
@@ -548,6 +548,9 @@ class ConsitencyTask(AtomisticTask):
             prog_bar=not is_train,
         )
         self.log_metrics(pred, target, subset)
+
+        norm_magnitude = torch.log10(pred["mu_pred"].detach().norm())
+        self.log("norm_magnitude", norm_magnitude, on_epoch=True)
 
         return loss
 
