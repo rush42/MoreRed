@@ -294,10 +294,11 @@ class SamplerCallback(Callback):
 
         # compute RMSD of denoised structures if requested
         if self.log_rmsd:
+            original_key = f"original_{properties.R}"
             # get the reference positions
             reference_R = (
-                batch[f"original_{properties.R}"]
-                if "original_R" in batch
+                batch[original_key]
+                if original_key in batch
                 else batch[properties.R]
             )
 
