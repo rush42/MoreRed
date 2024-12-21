@@ -472,23 +472,21 @@ class ConsitencyTask(AtomisticTask):
         Args:
             batch: input batch.
         """
+        input = {k: v.clone() for k, v in batch.items()}
         batch_hat = {k: v.clone() for k, v in batch.items()}
 
         x_t = batch_hat[self.x_t_key]
-        t = self.unnormalize_time(batch_hat[self.time_key])
-
-        # create outputs before denoiser to presever dtypes
-        t_next = torch.zeros_like(batch[self.time_key])
-        x_t_next = batch_hat[f"original_{self.x_t_key}"]
+        t = batch_hat[self.time_key]
+        t1 = self.normalize_time(torch.tensor(1))
 
         # take one step of the reverse ODE for every t > 1
-        input = {k: v.clone() for k, v in batch.items()}
-        x_t_next[t > 1] = self.reverse_ode.inference_step(input, t)[t > 1].to(
+        t_next = t.clone() - t1
+        x_t_next = self.reverse_ode.inference_step(input, t).to(
             dtype=x_t.dtype
         )
 
-        # compute t-1 for all molecules
-        t_next[t > 0] = self.normalize_time(t[t > 0] - 1)
+        # for all t=0 use the original positions
+        x_t_next[t_next == 0] = batch_hat[f"original_{self.x_t_key}"][t_next == 0]
 
         # update batch_hat
         batch_hat[self.x_t_key] = x_t_next
