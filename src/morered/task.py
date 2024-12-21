@@ -481,9 +481,7 @@ class ConsitencyTask(AtomisticTask):
 
         # take one step of the reverse ODE for every t > 1
         t_next = t.clone() - t1
-        x_t_next = self.reverse_ode.inference_step(input, t).to(
-            dtype=x_t.dtype
-        )
+        x_t_next = self.reverse_ode.inference_step(input, t).to(dtype=x_t.dtype)
 
         # for all t=0 use the original positions
         x_t_next[t_next == 0] = batch_hat[f"original_{self.x_t_key}"][t_next == 0]
@@ -492,10 +490,10 @@ class ConsitencyTask(AtomisticTask):
         batch_hat[self.x_t_key] = x_t_next
         batch_hat[self.time_key] = t_next
 
-        # if self.recompute_neighbors:
-        #     batch_hat = compute_neighbors(
-        #         batch_hat, cutoff=self.cutoff, device=self.device
-        #     )
+        if self.recompute_neighbors:
+            batch_hat.update(
+                compute_neighbors(batch_hat, cutoff=self.cutoff, device=self.device)
+            )
 
         return batch_hat
 
