@@ -211,3 +211,5 @@ callbacks:
     log_rmsd: True
   early_stopping:
     patience: 1000
+
+matmul_precision: 'high'
