@@ -371,10 +371,14 @@ class ConsistencyModelOutput(ModelOutput):
             permutation = find_optimal_permutation(pred, target)
             target[self.target_property] = target[self.target_property][permutation]
 
-        loss_samplewise = self.loss_fn(pred[self.name], target[self.target_property], **kwargs)
+        loss_samplewise = self.loss_fn(
+            pred[self.name], target[self.target_property], **kwargs
+        )
 
         if self.weight_property is not None:
-            weights = self.noise_schedule(target.t, [self.weight_property])[self.weight_property]
+            weights = self.noise_schedule(target.t, [self.weight_property])[
+                self.weight_property
+            ]
             loss_samplewise *= weights
 
         loss = torch.mean(loss_samplewise)
