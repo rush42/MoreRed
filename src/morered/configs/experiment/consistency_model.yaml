@@ -22,6 +22,9 @@ globals:
   model_path: best_model
   cutoff: 500
   lr: 1.0e-5
+  permutation_invariant: true
+  include_t0: false
+  t1_bonus: 0.0
   n_atom_basis: 256
   noise_target_key: eps
   noise_output_key: eps_pred
@@ -103,7 +106,7 @@ task:
   outputs:
     - _target_: morered.task.ConsistencyModelOutput
       name: ${globals.mean_output_key}
-      permutation_invariant: true
+      permutation_invariant: ${globals.permutation_invariant}
       target_property: ${globals.mean_output_key}
       loss_fn:
         _target_: torch.nn.MSELoss
@@ -183,8 +186,8 @@ data:
     diffuse_property: ${globals.x_t_target_key}
     diffusion_process: ${globals.diffusion_process}
     time_key: ${globals.time_target_key}
-    include_t0: false
-    t1_bonus: 0.0
+    include_t0: ${globals.include_t0}
+    t1_bonus: ${globals.t1_bonus}
 
   - _target_: morered.transform.AllToAllNeighborList
 
