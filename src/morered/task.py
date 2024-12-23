@@ -511,6 +511,7 @@ class ConsitencyTask(AtomisticTask):
             batch: input batch.
             batch_idx: batch index.
         """
+        batch_size = batch[properties.n_atoms].shape[0]
         is_train = subset == "train"
 
         # get batch_hat which is one step down the probability flow
@@ -535,11 +536,12 @@ class ConsitencyTask(AtomisticTask):
             on_step=is_train,
             on_epoch=not is_train,
             prog_bar=not is_train,
+            batch_size=batch_size
         )
         self.log_metrics(pred, target, subset)
 
-        norm_magnitude = torch.log10(pred["mu_pred"].detach().norm())
-        self.log("norm_magnitude", norm_magnitude, on_epoch=True)
+        norm_magnitude = torch.log10(pred["mu_pred"].detach().norm(dim=1).mean())
+        self.log("norm_magnitude", norm_magnitude, on_epoch=True, batch_size=batch_size)
 
         return loss
 
