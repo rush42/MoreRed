@@ -154,7 +154,6 @@ model:
     postprocessors:
     - _target_: morered.transform.BatchSubtractCenterOfMass
       name: ${globals.mean_output_key}
-    # - _target_: schnetpack.transform.CastTo64
 
 data:
   _target_: morered.datasets.QM7X
