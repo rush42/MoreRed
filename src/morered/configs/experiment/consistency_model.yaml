@@ -81,8 +81,8 @@ task:
   _target_: morered.ConsitencyTask
   reverse_ode: ${globals.reverse_ode}
   optimizer_cls: torch.optim.AdamW
-  ema_decay: 0.9999
-  initialize_with_denoiser: false
+  ema_decay: 0.99995
+  initialize_with_denoiser: true
   optimizer_args:
     lr: ${globals.lr}
     weight_decay: 0.0
