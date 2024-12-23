@@ -540,8 +540,11 @@ class ConsitencyTask(AtomisticTask):
         )
         self.log_metrics(pred, target, subset)
 
-        norm_magnitude = pred["mu_pred"].detach().norm(dim=1).mean()
-        self.log("norm_magnitude", norm_magnitude, on_epoch=True, batch_size=batch_size)
+        target_magnitude = target["mu_pred"].detach().norm(dim=1).mean()
+        self.log("target_magnitude", target_magnitude, on_epoch=True, batch_size=batch_size)
+
+        pred_magnitude = pred["mu_pred"].detach().norm(dim=1).mean()
+        self.log("pred_magnitude", pred_magnitude, on_epoch=True, batch_size=batch_size)
 
         return loss
 
