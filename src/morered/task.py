@@ -329,7 +329,6 @@ class ConsistencyModelOutput(ModelOutput):
 
     def __init__(
         self,
-        name: str,
         permutation_invariant: bool = True,
         noise_schedule: Optional[NoiseSchedule] = None,
         weight_property: Optional[str] = None,
@@ -341,7 +340,7 @@ class ConsistencyModelOutput(ModelOutput):
             weight_fn: the weight function to weight each sample based on target[weight_property].
             weight_property: the property name to use for the weight function.
         """
-        super().__init__(name=name, **kwargs)
+        super().__init__(**kwargs)
 
         self.weight_property = weight_property
         self.permutation_invariant = permutation_invariant
@@ -384,6 +383,37 @@ class ConsistencyModelOutput(ModelOutput):
         loss = torch.mean(loss_samplewise)
 
         return self.loss_weight * loss
+
+class NormRegularizer(UnsupervisedModelOutput):
+    def __init__(
+        self,
+        lower_limit: Optional[float] = None,
+        upper_limit: Optional[float] = None,
+        metrics: Optional[dict] = None,
+        **kwargs,
+    ):
+        """
+        Args:
+            name: name of the output.
+            weight_fn: the weight function to weight each sample based on target[weight_property].
+            weight_property: the property name to use for the weight function.
+        """
+        if upper_limit is None and lower_limit is None:
+            raise Exception("Both upper and lower limit are None. You need to specify at least on of them.")
+        
+        def loss_fn(pred):
+            pred_magnitude = pred.norm(dim=1).mean()
+            lower_penalty = 0
+            upper_penalty = 0
+            if lower_limit is not None:
+                lower_penalty = nn.functional.relu(lower_limit - pred_magnitude)
+            if upper_limit is not None:
+                upper_penalty = nn.functional.relu(pred_magnitude - upper_limit)
+            return lower_penalty + upper_penalty
+        if metrics is None:
+            metrics = {}
+
+        super().__init__(loss_fn=loss_fn, metrics=metrics, **kwargs)
 
 
 class ConsitencyTask(AtomisticTask):
