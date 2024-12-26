@@ -432,7 +432,7 @@ def find_optimal_permutation(
         Z_0 = target[properties.Z][molecule_mask].detach()
 
         # distance[i, j] = |R[i] - R_0[j]|
-        distances = (R.unsqueeze(1) - R_0.unsqueeze(0)).norm(dim=2)
+        distances = (R.unsqueeze(1) - R_0.unsqueeze(0)).norm(dim=2).square()
         # charge_matches[i, j] = Z[i] == Z_0[j]
         charge_matches = Z.unsqueeze(1) == Z_0.unsqueeze(0)
 
