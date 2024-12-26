@@ -108,7 +108,6 @@ task:
     - _target_: morered.task.ConsistencyModelOutput
       name: ${globals.mean_output_key}
       permutation_invariant: ${globals.permutation_invariant}
-      target_property: ${globals.mean_output_key}
       loss_fn:
         _target_: torch.nn.MSELoss
       metrics:
