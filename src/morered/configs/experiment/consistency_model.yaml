@@ -115,6 +115,10 @@ task:
           _target_: torchmetrics.regression.MeanSquaredError
           squared: true
       loss_weight: 1.0
+    - _target_: morered.task.NormRegularizer
+      name: ${globals.mean_output_key
+      lower_limit: ${globals.norm_limit}
+      loss_weight: 1.0
 
 model:
   _target_: morered.model.consistency_parametrization.ConsistencyParametrization
