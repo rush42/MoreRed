@@ -32,6 +32,7 @@ globals:
   time_target_key: t
   x_t_target_key: '_positions'
   denoiser_path: "${run.model_dir}/qm7x_ddpm.pt"
+  norm_limit: 2.0
 
   noise_schedule:
     _target_: morered.noise_schedules.PolynomialSchedule
