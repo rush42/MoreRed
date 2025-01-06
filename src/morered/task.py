@@ -387,8 +387,7 @@ class ConsistencyModelOutput(ModelOutput):
 class NormRegularizer(UnsupervisedModelOutput):
     def __init__(
         self,
-        lower_limit: Optional[float] = None,
-        upper_limit: Optional[float] = None,
+        limit: float = 0.0,
         metrics: Optional[dict] = None,
         **kwargs,
     ):
@@ -398,28 +397,28 @@ class NormRegularizer(UnsupervisedModelOutput):
             weight_fn: the weight function to weight each sample based on target[weight_property].
             weight_property: the property name to use for the weight function.
         """
-        if upper_limit is None and lower_limit is None:
-            raise Exception("Both upper and lower limit are None. You need to specify at least on of them.")
         
-        def loss_fn(pred):
-            pred_magnitude = pred.norm(dim=1).mean()
-            lower_penalty = 0
-            upper_penalty = 0
-            if lower_limit is not None:
-                lower_penalty = nn.functional.relu(lower_limit - pred_magnitude)
-            if upper_limit is not None:
-                upper_penalty = nn.functional.relu(pred_magnitude - upper_limit)
-            return lower_penalty + upper_penalty
+        self.limit = limit
+        
         if metrics is None:
             metrics = {}
 
-        super().__init__(loss_fn=loss_fn, metrics=metrics, **kwargs)
+        super().__init__(metrics=metrics, **kwargs)
 
+    def calculate_loss(self, pred, target=None):
+        # average the norm over all atoms
+        pred_magnitude = pred[self.name].norm(dim=1).mean()
+        # truncate the loss at lower_limit
+        penalty = nn.functional.relu(self.limit - pred_magnitude)
+
+        if self.loss_fn is None:
+            return penalty
+        
+        return self.loss_fn(penalty)
 
 class ConsitencyTask(AtomisticTask):
     """
     Defines the consitency task for pytorch lightning as proposed by Song et al 2021.
-    Subclasses the atomistic task and adds the diffusion NLL.
     """
 
     def __init__(

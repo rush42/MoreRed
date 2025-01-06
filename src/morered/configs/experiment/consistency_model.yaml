@@ -117,7 +117,7 @@ task:
       loss_weight: 1.0
     - _target_: morered.task.NormRegularizer
       name: ${globals.mean_output_key}
-      lower_limit: ${globals.norm_limit}
+      limit: ${globals.norm_limit}
       loss_weight: 1.0
 
 model:
