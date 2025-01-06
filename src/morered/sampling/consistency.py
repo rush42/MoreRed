@@ -129,7 +129,7 @@ class ConsistencySampler(MoreRedAS):
         self,
         inputs: Dict[str, torch.Tensor],
         t: Optional[int] = None,
-        iters: Optional[int] = 1,
+        max_iters: Optional[int] = 1,
         **kwargs,
     ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor, List[Dict[str, torch.Tensor]]]:
         """
@@ -160,7 +160,7 @@ class ConsistencySampler(MoreRedAS):
         hist = []
 
         # multi step consistency sampling
-        for i in tqdm(range(0, iters)):
+        for i in tqdm(range(0, max_iters)):
             # update the neighbors list if required
             if self.recompute_neighbors:
                 batch = compute_neighbors(batch, cutoff=self.cutoff, device=self.device)
@@ -173,7 +173,7 @@ class ConsistencySampler(MoreRedAS):
 
             # save history if required. Must be done before the reverse step.
             if self.save_progress and (
-                i % self.progress_stride == 0 or i == iters - 1
+                i % self.progress_stride == 0 or i == max_iters - 1
             ):
                 hist.append(
                     {
@@ -199,8 +199,8 @@ class ConsistencySampler(MoreRedAS):
             num_steps[converged & (num_steps < 0)] = i
 
             # check if all molecules converged and end the denoising
-            # if converged.all():
-            #     break
+            if converged.all():
+                break
 
 
         # prepare the final output
@@ -224,8 +224,9 @@ class ConsistencySampler(MoreRedAS):
         max_iters: int = 1,
         **kwargs,
     ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor, List[Dict[str, torch.Tensor]]]:
+        
         if max_iters > 1:
-            return self.sample_ms(inputs, t=t, iters=max_iters, **kwargs)
+            return self.sample_ms(inputs, t=t, max_iters=max_iters, **kwargs)
         
         x_0, time_steps = self.sample(inputs, t)
 
