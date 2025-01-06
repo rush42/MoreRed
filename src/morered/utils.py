@@ -405,7 +405,7 @@ def generate_bonds_data(save_path: Optional[str] = None, overwrite: bool = False
 
     return data
 
-
+@torch.no_grad()
 def find_optimal_permutation(
     pred: Dict[str, torch.Tensor], target: Dict[str, torch.Tensor]
 ) -> torch.Tensor:
@@ -426,10 +426,10 @@ def find_optimal_permutation(
         molecule_mask = target[properties.idx_m] == m_idx
 
         # get the positions and atomic numbers for target and predicton
-        R = pred[properties.R][molecule_mask].detach()
-        Z = pred[properties.Z][molecule_mask].detach()
-        R_0 = target[properties.R][molecule_mask].detach()
-        Z_0 = target[properties.Z][molecule_mask].detach()
+        R = pred[properties.R][molecule_mask]
+        Z = pred[properties.Z][molecule_mask]
+        R_0 = target[properties.R][molecule_mask]
+        Z_0 = target[properties.Z][molecule_mask]
 
         # distance[i, j] = |R[i] - R_0[j]|
         distances = (R.unsqueeze(1) - R_0.unsqueeze(0)).norm(dim=2).square()
