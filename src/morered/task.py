@@ -568,12 +568,13 @@ class ConsitencyTask(AtomisticTask):
             batch_size=batch_size
         )
         self.log_metrics(pred, target, subset)
+        
+        with torch.no_grad():
+            target_magnitude = target["mu_pred"].norm(dim=1).mean()
+            self.log("target_magnitude", target_magnitude, on_epoch=True, batch_size=batch_size)
 
-        target_magnitude = target["mu_pred"].detach().norm(dim=1).mean()
-        self.log("target_magnitude", target_magnitude, on_epoch=True, batch_size=batch_size)
-
-        pred_magnitude = pred["mu_pred"].detach().norm(dim=1).mean()
-        self.log("pred_magnitude", pred_magnitude, on_epoch=True, batch_size=batch_size)
+            pred_magnitude = pred["mu_pred"].norm(dim=1).mean()
+            self.log("pred_magnitude", pred_magnitude, on_epoch=True, batch_size=batch_size)
 
         return loss
 
