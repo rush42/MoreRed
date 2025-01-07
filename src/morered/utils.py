@@ -446,3 +446,32 @@ def find_optimal_permutation(
         offset += n_atoms
 
     return batch_permutation
+
+
+@torch.no_grad()
+def rotate_optimally(
+    pred: Dict[str, torch.Tensor], target: Dict[str, torch.Tensor]
+) -> torch.Tensor:
+    """
+    rotate all molecules in the target s.t. the align with the prediction e.g. the Kabsch algorithm.
+    """
+    # loop over molecules/systems
+    for m_idx, _ in enumerate(pred[properties.n_atoms]):
+        # get the indices of the current molecule
+        molecule_mask = target[properties.idx_m] == m_idx
+
+        # get the positions and atomic numbers for target and predicton
+        P = pred[properties.R][molecule_mask]
+        Q = target[properties.R][molecule_mask]
+
+        H = torch.matmul(P.T, Q)
+        U, _, V = torch.svd(H)
+        d = U.det() * V.det()
+        S = [[1, 0, 0],
+             [0, 1, 0],
+             [0, 0, d]]
+
+        R = torch.matmul(U, S, V.T)
+        target[properties.R][molecule_mask] = torch.matmul(R, Q)
+
+    return target[properties.R]
