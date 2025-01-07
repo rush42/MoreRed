@@ -113,7 +113,7 @@ class ConsistencySampler(MoreRedAS):
         batch = self.prepare_batch(inputs, inplace=inplace)
 
         if t is None:
-            t = self.get_time_steps(batch)
+            t = self.get_time_steps(batch, 0)
         else:
             t = torch.full_like(
                 inputs[properties.n_atoms], fill_value=t, device=self.device
@@ -193,7 +193,7 @@ class ConsistencySampler(MoreRedAS):
             )
 
             # use the average time step for convergence check
-            converged = converged | (t <= self.convergence_step)
+            converged = converged | (time_steps <= self.convergence_step)
 
             # save the number of steps
             num_steps[converged & (num_steps < 0)] = i
