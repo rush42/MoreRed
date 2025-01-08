@@ -4,7 +4,7 @@ import logging
 from typing import Dict, Optional
 
 from morered.noise_schedules import NoiseSchedule
-from morered.utils import compute_neighbors, find_optimal_permutation
+from morered.utils import compute_neighbors, find_optimal_permutation, rotate_optimally
 import torch
 from torch_ema import ExponentialMovingAverage as EMA
 from schnetpack import properties
@@ -330,6 +330,7 @@ class ConsistencyModelOutput(ModelOutput):
     def __init__(
         self,
         permutation_invariant: bool = True,
+        rotation_invariant: bool = False,
         noise_schedule: Optional[NoiseSchedule] = None,
         weight_property: Optional[str] = None,
         **kwargs,
@@ -344,6 +345,7 @@ class ConsistencyModelOutput(ModelOutput):
 
         self.weight_property = weight_property
         self.permutation_invariant = permutation_invariant
+        self.rotation_invariant = rotation_invariant
         self.weight_property = weight_property
         self.noise_schedule = noise_schedule
         if weight_property is not None and noise_schedule is None:
