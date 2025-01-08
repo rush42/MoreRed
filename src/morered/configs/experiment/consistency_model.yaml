@@ -16,7 +16,7 @@ run:
   model_dir: ${run.work_dir}/models
   experiment: consistency_model
   id: ${uuid:1}
-  ckpt_path: null
+  # ckpt_path: ${run.path}/2366d392-c2b6-11ef-a3a4-a088c2c68c7a/checkpoints/last.ckpt
 
 globals:
   model_path: best_model
