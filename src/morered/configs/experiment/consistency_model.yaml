@@ -213,7 +213,7 @@ sampler:
 
 callbacks:
   sampling:
-    t: 30
+    t: 15
     max_steps: 1
     start_epoch: 0
     every_n_epochs: 10
