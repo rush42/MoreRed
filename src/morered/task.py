@@ -370,6 +370,10 @@ class ConsistencyModelOutput(ModelOutput):
             permutation = find_optimal_permutation(pred, target)
             target[self.target_property] = target[self.target_property][permutation]
 
+
+        if self.rotation_invariant:
+            target[properties.R] = rotate_optimally(pred, target)
+
         loss_samplewise = self.loss_fn(
             pred[self.name], target[self.target_property], **kwargs
         )
