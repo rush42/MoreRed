@@ -455,6 +455,7 @@ def rotate_optimally(
     """
     rotate all molecules in the target s.t. the align with the prediction e.g. the Kabsch algorithm.
     """
+    device = target[properties.R].device
     # loop over molecules/systems
     for m_idx, _ in enumerate(pred[properties.n_atoms]):
         # get the indices of the current molecule
@@ -467,11 +468,12 @@ def rotate_optimally(
         H = torch.matmul(P.T, Q)
         U, _, V = torch.svd(H)
         d = U.det() * V.det()
-        S = [[1, 0, 0],
+        S = torch.tensor(
+            [[1, 0, 0],
              [0, 1, 0],
-             [0, 0, d]]
+             [0, 0, d]], device=device)
 
-        R = torch.matmul(U, S, V.T)
-        target[properties.R][molecule_mask] = torch.matmul(R, Q)
+        R = torch.linalg.multi_dot([U, S, V.T])
+        target[properties.R][molecule_mask] = torch.matmul(Q, R)
 
     return target[properties.R]
