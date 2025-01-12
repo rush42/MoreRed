@@ -21,7 +21,7 @@ run:
 globals:
   model_path: best_model
   cutoff: 500
-  lr: 1.0e-5
+  lr: 1.0e-4
   permutation_invariant: true
   rotation_invariant: false
   include_t0: false
