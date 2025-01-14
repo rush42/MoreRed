@@ -169,7 +169,7 @@ data:
   _target_: morered.datasets.QM7X
   datapath: ${run.data_dir}/qm7x.db
   data_workdir: null
-  batch_size: 1125
+  batch_size: 225
   num_train: 4500
   num_val: 1250
   num_test: null
@@ -217,7 +217,7 @@ callbacks:
   sampling:
     t: 15
     max_steps: 1
-    start_epoch: 10
+    start_epoch: 0
     every_n_epochs: 10
     log_rmsd: True
   # early_stopping:
