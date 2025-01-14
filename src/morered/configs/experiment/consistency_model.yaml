@@ -34,6 +34,7 @@ globals:
   x_t_target_key: '_positions'
   denoiser_path: "${run.model_dir}/qm7x_ddpm.pt"
   norm_limit: 2.0
+  max_diffusion_level: 0.5
 
   noise_schedule:
     _target_: morered.noise_schedules.PolynomialSchedule
@@ -194,6 +195,7 @@ data:
     time_key: ${globals.time_target_key}
     include_t0: ${globals.include_t0}
     t1_bonus: ${globals.t1_bonus}
+    max_diffusion_level: ${globals.max_diffusion_level}
 
   - _target_: morered.transform.AllToAllNeighborList
 

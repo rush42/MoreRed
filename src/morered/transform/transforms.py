@@ -114,7 +114,8 @@ class Diffuse(trn.Transform):
         output_key: Optional[str] = None,
         include_t0: bool = True,
         time_key: str = "t",
-        t1_bonus: int = 0.0, 
+        t1_bonus: int = 0.0,
+        max_diffusion_level: float = 1.0,
     ):
         """
         Args:
@@ -131,6 +132,9 @@ class Diffuse(trn.Transform):
         self.time_key = time_key
         self.include_t0 = include_t0
         self.t1_bonus = t1_bonus
+        if max_diffusion_level < 0 or max_diffusion_level > 1:
+            raise "max_diffusion_level needs to be between 0 and 1"
+        self.max_diffusion_level = max_diffusion_level
 
         # Sanity check
         if (
@@ -160,7 +164,7 @@ class Diffuse(trn.Transform):
         # sample one training time step for the input molecule.
         t = torch.randint(
             0 if self.include_t0 else 1,
-            self.diffusion_process.get_T(),
+            round((self.diffusion_process.get_T() * self.max_diffusion_level)),
             size=(1,),
             dtype=torch.long,
             device=device,
