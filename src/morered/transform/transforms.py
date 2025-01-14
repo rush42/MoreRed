@@ -115,7 +115,7 @@ class Diffuse(trn.Transform):
         include_t0: bool = True,
         time_key: str = "t",
         t1_bonus: int = 0.0,
-        max_diffusion_level: float = 1.0,
+        diffusion_range: float = 1.0,
     ):
         """
         Args:
@@ -126,7 +126,7 @@ class Diffuse(trn.Transform):
             time_key: key to save the normalized diffusion time step.
             include_t0: whether to produce undiffused samples
             t1_bonus: probability to favor t1 
-            max_diffusion_level: a fraction which determines the maximum diffusion
+            diffusion_range: a fraction which determines the maximum diffusion
         """
         super().__init__()
         self.diffuse_property = diffuse_property
@@ -135,9 +135,9 @@ class Diffuse(trn.Transform):
         self.time_key = time_key
         self.include_t0 = include_t0
         self.t1_bonus = t1_bonus
-        if max_diffusion_level < 0 or max_diffusion_level > 1:
-            raise "max_diffusion_level needs to be between 0 and 1"
-        self.max_diffusion_level = max_diffusion_level
+        if diffusion_range < 0 or diffusion_range > 1:
+            raise "diffusion_range needs to be between 0 and 1"
+        self.diffusion_range = diffusion_range
 
         # Sanity check
         if (
@@ -167,7 +167,7 @@ class Diffuse(trn.Transform):
         # sample one training time step for the input molecule.
         t = torch.randint(
             0 if self.include_t0 else 1,
-            round((self.diffusion_process.get_T() * self.max_diffusion_level)),
+            round((self.diffusion_process.get_T() * self.diffusion_range)),
             size=(1,),
             dtype=torch.long,
             device=device,
