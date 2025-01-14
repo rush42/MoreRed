@@ -88,7 +88,7 @@ task:
   reverse_ode: ${globals.reverse_ode}
   optimizer_cls: torch.optim.AdamW
   ema_decay: 0.99995
-  initialize_with_denoiser: false
+  initialize_with_denoiser: true
   optimizer_args:
     lr: ${globals.lr}
     weight_decay: 0.0
@@ -134,11 +134,11 @@ model:
     representation:
       radial_basis:
         _target_: schnetpack.nn.radial.GaussianRBF
-        n_rbf: 50
+        n_rbf: 20
         cutoff: ${globals.cutoff}
       _target_: schnetpack.representation.PaiNN
       n_atom_basis: ${globals.n_atom_basis}
-      n_interactions: 6
+      n_interactions: 3
       shared_interactions: false
       shared_filters: false
       cutoff_fn:
