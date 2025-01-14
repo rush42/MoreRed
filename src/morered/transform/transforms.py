@@ -124,6 +124,9 @@ class Diffuse(trn.Transform):
             output_key: key to store the diffused property.
                         if None, the diffuse_property key is used.
             time_key: key to save the normalized diffusion time step.
+            include_t0: whether to produce undiffused samples
+            t1_bonus: probability to favor t1 
+            max_diffusion_level: a fraction which determines the maximum diffusion
         """
         super().__init__()
         self.diffuse_property = diffuse_property
