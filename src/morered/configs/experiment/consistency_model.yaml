@@ -68,7 +68,7 @@ trainer:
   # gradient_clip_val: 5.0
   accumulate_grad_batches: 1
   val_check_interval: 1.0
-  check_val_every_n_epoch: 10
+  check_val_every_n_epoch: 1
   log_every_n_steps: 5
   num_sanity_val_steps: 0
   fast_dev_run: false
@@ -93,7 +93,7 @@ task:
     lr: ${globals.lr}
     weight_decay: 0.0
   scheduler_cls: schnetpack.train.ReduceLROnPlateau
-  scheduler_monitor: train_loss
+  scheduler_monitor: val_loss
   scheduler_args:
     mode: min
     factor: 0.5
@@ -101,7 +101,7 @@ task:
     threshold: 0.0
     threshold_mode: rel
     cooldown: 10
-    min_lr: ${globals.lr}
+    min_lr: 0
     smoothing_factor: 0.0
   warmup_steps: 0
   time_key: ${globals.time_target_key}
