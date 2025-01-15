@@ -212,6 +212,7 @@ class ConsistencySampler(MoreRedAS):
             )
         }
 
+        num_steps[num_steps < 0] = max_iters
         num_steps = num_steps.cpu()
 
         return x_0, num_steps, hist
