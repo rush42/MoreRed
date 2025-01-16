@@ -33,6 +33,7 @@ globals:
   time_target_key: t
   x_t_target_key: '_positions'
   denoiser_path: "${run.model_dir}/qm7x_ddpm_f32.pt"
+  split_file: ${run.work_dir}/split.npz
   norm_limit: 2.1
   diffusion_range: 0.5
 
