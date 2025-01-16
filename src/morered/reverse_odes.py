@@ -89,6 +89,7 @@ class ReverseODE:
         )
         return time_steps
 
+    @torch.no_grad()
     def prepare_batch(self, inputs: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         # copy inputs to avoid inplace operations
         batch = {prop: val.clone().to(self.device) for prop, val in inputs.items()}
@@ -140,6 +141,7 @@ class ReverseODE:
 
         return x_t_next
 
+    @torch.no_grad()
     def denoise(
         self,
         inputs: Dict[str, torch.Tensor],
