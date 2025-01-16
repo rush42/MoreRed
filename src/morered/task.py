@@ -580,6 +580,9 @@ class ConsitencyTask(AtomisticTask):
             pred_magnitude = pred["mu_pred"].norm(dim=1).mean()
             self.log("pred_magnitude", pred_magnitude, on_epoch=True, batch_size=batch_size)
 
+            # data_magnitude = batch["original__positions"].norm(dim=1).mean()
+            # self.log("data_magnitude", data_magnitude, on_epoch=True, batch_size=batch_size)
+
         return loss
 
     def training_step(
