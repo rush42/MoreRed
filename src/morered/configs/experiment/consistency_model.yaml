@@ -32,7 +32,7 @@ globals:
   mean_output_key: mu_pred
   time_target_key: t
   x_t_target_key: '_positions'
-  denoiser_path: "${run.model_dir}/qm7x_ddpm.pt"
+  denoiser_path: "${run.model_dir}/qm7x_ddpm_f32.pt"
   norm_limit: 0.0
   diffusion_range: 0.5
 

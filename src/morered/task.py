@@ -511,16 +511,14 @@ class ConsitencyTask(AtomisticTask):
         Args:
             batch: input batch.
         """
-        input = {k: v.clone() for k, v in batch.items()}
         batch_hat = {k: v.clone() for k, v in batch.items()}
 
-        x_t = batch_hat[self.x_t_key]
         t = batch_hat[self.time_key]
         t1 = self.normalize_time(torch.tensor(1))
 
-        # take one step of the reverse ODE for every t > 1
+        # take one step on the reverse ODE
         t_next = t.clone() - t1
-        x_t_next = self.reverse_ode.inference_step(input, t).to(dtype=x_t.dtype)
+        x_t_next = self.reverse_ode.inference_step(batch, t)
 
         # for all t=0 use the original positions
         x_t_next[t_next == 0] = batch_hat[f"original_{self.x_t_key}"][t_next == 0]
