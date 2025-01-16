@@ -33,7 +33,7 @@ globals:
   time_target_key: t
   x_t_target_key: '_positions'
   denoiser_path: "${run.model_dir}/qm7x_ddpm.pt"
-  split_file: ${run.work_dir}/split.npz
+  split_file_path: ${run.work_dir}/split.npz
   norm_limit: 2.1
   diffusion_range: 0.5
 
@@ -171,9 +171,10 @@ data:
   datapath: ${run.data_dir}/qm7x.db
   data_workdir: null
   batch_size: 225
-  num_train: 4500
-  num_val: 1250
-  num_test: null
+  split_file: ${globals.split_file_path}
+  # num_train: 4500
+  # num_val: 1250
+  # num_test: null
   num_workers: 4
   num_val_workers: null
   num_test_workers: null
