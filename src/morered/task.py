@@ -1,7 +1,7 @@
 import copy
 import inspect
 import logging
-from typing import Dict, Literal, Optional
+from typing import Dict, Literal, Optional, Union
 
 from morered.diffusion_schedule import DiffusionSchedule
 from morered.noise_schedules import NoiseSchedule
@@ -399,10 +399,10 @@ class LPIPSOutput(ModelOutput):
 
     def __init__(
         self,
-        model: NeuralNetworkPotential,
+        source_model: Union[NeuralNetworkPotential, str],
         name: Literal[
             "vector_representation", "scalar_representation"
-        ] = "vector_representation",
+        ] = "scalar_representation",
         **kwargs,
     ):
         """
@@ -410,13 +410,19 @@ class LPIPSOutput(ModelOutput):
             model: the model to use for the representation.
         """
         super().__init__(name=name, **kwargs)
+
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        if isinstance(source_model, str):
+            source_model = torch.load(source_model, map_location=device)
+
         model_output = nn.Identity()
-        model_output.to(model.device)
-        model_output.outputs
+        model_output.to(device)
         model_output.model_outputs = ["vector_representation", "scalar_representation"]
+
         self.representation = NeuralNetworkPotential(
-            input_modules=model.input_modules,
-            representation=model.representation,
+            input_modules=source_model.input_modules,
+            representation=source_model.representation,
             output_modules=nn.ModuleList([model_output]),
         )
         # freeze the representation
