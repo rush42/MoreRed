@@ -391,6 +391,55 @@ class ConsistencyModelOutput(ModelOutput):
 
         return self.loss_weight * loss
 
+
+class LPIPSOutput(ModelOutput):
+    """
+    define consistency output head.
+    """
+
+    def __init__(
+        self,
+        model: NeuralNetworkPotential,
+        name: Literal[
+            "vector_representation", "scalar_representation"
+        ] = "vector_representation",
+        **kwargs,
+    ):
+        """
+        Args:
+            model: the model to use for the representation.
+        """
+        super().__init__(name=name, **kwargs)
+        model_output = nn.Identity()
+        model_output.to(model.device)
+        model_output.outputs
+        model_output.model_outputs = ["vector_representation", "scalar_representation"]
+        self.representation = NeuralNetworkPotential(
+            input_modules=model.input_modules,
+            representation=model.representation,
+            output_modules=nn.ModuleList([model_output]),
+        )
+        # freeze the representation
+        for param in self.representation.parameters():
+            param.requires_grad = False
+
+    def calculate_loss(
+        self, pred: Dict[str, torch.Tensor], target: Dict[str, torch.Tensor]
+    ) -> torch.Tensor:
+        """
+        calculate the loss.
+
+        Args:
+            pred: outputs.
+            target: target values.
+        """
+        return self.loss_fn(
+            self.representation.forward(pred)[self.name],
+            self.representation.forward(target)[self.name],
+        )
+
+
+
 class NormRegularizer(UnsupervisedModelOutput):
     def __init__(
         self,
