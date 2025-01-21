@@ -151,7 +151,7 @@ class Diffuse(trn.Transform):
             )
             
     def sample_t(self, device):
-        t_low = 0 if self.include_t0 else 1,
+        t_low = 0 if self.include_t0 else 1
 
         t_high = round((self.diffusion_process.get_T() * self.diffusion_range))
         if self.diffusion_schedule is not None:
