@@ -4,6 +4,7 @@ from morered import (
     model,
     noise_schedules,
     reverse_odes,
+    diffusion_schedule,
     optimization,
     transform,
     sampling,

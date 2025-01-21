@@ -3,6 +3,7 @@ import inspect
 import logging
 from typing import Dict, Optional
 
+from morered.diffusion_schedule import DiffusionSchedule
 from morered.noise_schedules import NoiseSchedule
 from morered.utils import compute_neighbors, find_optimal_permutation, rotate_optimally
 import torch
@@ -440,6 +441,7 @@ class ConsitencyTask(AtomisticTask):
         skip_exploding_batches: bool = True,
         skip_referenceless_batches: bool = True,
         initialize_with_denoiser: bool = False,
+        diffusion_schedule: Optional[DiffusionSchedule] = None,
         **kwargs,
     ):
         """
@@ -458,6 +460,7 @@ class ConsitencyTask(AtomisticTask):
         self.recompute_neighbors = recompute_neighbors
         self.skip_exploding_batches = skip_exploding_batches
         self.skip_referenceless_batches = skip_referenceless_batches
+        self.diffusion_schedule = diffusion_schedule
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -651,3 +654,8 @@ class ConsitencyTask(AtomisticTask):
         # update the target model with the new online model parameters
         self.ema.update()
         return super().on_train_batch_end(*args)
+
+    def on_validation_end(self, *args):
+        if self.diffusion_schedule is not None:
+            self.diffusion_schedule.increase_epoch()
+        return super().on_validation_end(*args)

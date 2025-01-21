@@ -6,8 +6,8 @@ import torch
 from torch import nn
 from schnetpack import properties
 
+from morered.diffusion_schedule import DiffusionSchedule
 from morered.processes.base import DiffusionProcess
-from morered.reverse_odes import ReverseODE
 from morered.utils import batch_center_systems
 
 __all__ = [
@@ -16,7 +16,7 @@ __all__ = [
     "Diffuse",
 ]
 
-
+epoch = 0
 class AllToAllNeighborList(trn.NeighborListTransform):
     """
     Calculate a full neighbor list for all atoms in the system.
@@ -116,6 +116,7 @@ class Diffuse(trn.Transform):
         time_key: str = "t",
         t1_bonus: int = 0.0,
         diffusion_range: float = 1.0,
+        diffusion_schedule: Optional[DiffusionSchedule] = None,
     ):
         """
         Args:
@@ -138,7 +139,7 @@ class Diffuse(trn.Transform):
         if diffusion_range < 0 or diffusion_range > 1:
             raise "diffusion_range needs to be between 0 and 1"
         self.diffusion_range = diffusion_range
-
+        self.diffusion_schedule = diffusion_schedule
         # Sanity check
         if (
             not self.diffusion_process.invariant
@@ -148,6 +149,25 @@ class Diffuse(trn.Transform):
                 "Diffusing atom positions R without invariant constraint"
                 "(invariant=False) might lead to unexpected results."
             )
+            
+    def sample_t(self, device):
+        t_low = 0 if self.include_t0 else 1,
+
+        t_high = round((self.diffusion_process.get_T() * self.diffusion_range))
+        if self.diffusion_schedule is not None:
+            t_high = self.diffusion_schedule.get_range()
+
+        t = torch.randint(
+            t_low,
+            t_high,
+            size=(1,),
+            dtype=torch.long,
+            device=device,
+        )
+
+        if self.t1_bonus != 0:
+            if (torch.rand(size=(1,)) < self.t1_bonus).all():
+                t[0] = 1
 
     def forward(self, inputs: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
@@ -157,25 +177,14 @@ class Diffuse(trn.Transform):
             inputs: dictionary of input tensors as in SchNetPack.
         """
         x_0 = inputs[self.diffuse_property]
-        device = x_0.device
-
+        
         # save the original value.
         outputs = {
             f"original_{self.diffuse_property}": x_0,
         }
 
-        # sample one training time step for the input molecule.
-        t = torch.randint(
-            0 if self.include_t0 else 1,
-            round((self.diffusion_process.get_T() * self.diffusion_range)),
-            size=(1,),
-            dtype=torch.long,
-            device=device,
-        )
-
-        if self.t1_bonus != 0:
-            if (torch.rand(size=(1,)) < self.t1_bonus).all():
-                t[0] = 1
+        # sample 't' for the input molecule.
+        t = self.sample_t(device=x_0.device)
 
         # diffuse the property.
         tmp = self.diffusion_process.diffuse(

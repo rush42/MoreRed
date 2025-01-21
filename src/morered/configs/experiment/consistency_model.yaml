@@ -16,6 +16,7 @@ run:
   model_dir: ${run.work_dir}/models
   experiment: consistency_model
   id: ${uuid:1}
+  dir: ${run.path}/consistency_rg${globals.norm_regularization}_bs${data.batch_size}_dr${globals.diffusion_range}_${run.id}
   # ckpt_path: ${run.path}/2366d392-c2b6-11ef-a3a4-a088c2c68c7a/checkpoints/last.ckpt
 
 globals:
@@ -34,16 +35,22 @@ globals:
   x_t_target_key: '_positions'
   denoiser_path: "${run.model_dir}/qm7x_ddpm.pt"
   split_file_path: ${run.work_dir}/split.npz
-  norm_limit: 2.1
+  norm_regularization: 2.1
   diffusion_range: 0.5
+  monitor_metric: 'val_sampling_rmsd'
+  T: 64
 
   noise_schedule:
     _target_: morered.noise_schedules.PolynomialSchedule
-    T: 64
+    T: ${globals.T}
     s: 1.0e-05
     dtype: float64
     variance_type: lower_bound
 
+  diffusion_schedule:
+    _target_: morered.diffusion_schedule.DiffusionSchedule
+    T: ${globals.T}
+    
   diffusion_process:
     _target_: morered.processes.VPGaussianDDPM
     noise_schedule: ${globals.noise_schedule}
@@ -90,11 +97,13 @@ task:
   optimizer_cls: torch.optim.AdamW
   ema_decay: 0.99995
   initialize_with_denoiser: true
+  skip_referenceless_batches: false
+  diffusion_schedule: ${globals.diffusion_schedule}
   optimizer_args:
     lr: ${globals.lr}
     weight_decay: 0.0
   scheduler_cls: schnetpack.train.ReduceLROnPlateau
-  scheduler_monitor: val_loss
+  scheduler_monitor: ${globals.monitor_metric}
   scheduler_args:
     mode: min
     factor: 0.5
@@ -121,8 +130,8 @@ task:
       loss_weight: 1.0
     - _target_: morered.task.NormRegularizer
       name: ${globals.mean_output_key}
-      limit: ${globals.norm_limit}
-      loss_weight: 2.0
+      limit: ${globals.norm_regularization}
+      loss_weight: 1.0
 
 model:
   _target_: morered.model.consistency_parametrization.ConsistencyParametrization
@@ -172,9 +181,9 @@ data:
   data_workdir: null
   batch_size: 225
   split_file: ${globals.split_file_path}
-  # num_train: 4500
-  # num_val: 1250
-  # num_test: null
+  num_train: null
+  num_val: null
+  num_test: null
   num_workers: 4
   num_val_workers: null
   num_test_workers: null
@@ -194,6 +203,7 @@ data:
   - _target_: morered.transform.Diffuse
     diffuse_property: ${globals.x_t_target_key}
     diffusion_process: ${globals.diffusion_process}
+    diffusion_schedule: ${globals.diffusion_schedule}
     time_key: ${globals.time_target_key}
     include_t0: ${globals.include_t0}
     t1_bonus: ${globals.t1_bonus}
@@ -220,9 +230,10 @@ callbacks:
     t: 15
     max_steps: 1
     start_epoch: 0
-    every_n_epochs: 10
+    every_n_epochs: 1
     log_rmsd: True
-  # early_stopping:
-  #   patience: 1000
+  early_stopping:
+    patience: 1000
+    monitor: ${globals.monitor_metric}
 
 matmul_precision: 'high'
