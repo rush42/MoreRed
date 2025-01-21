@@ -1,7 +1,7 @@
 import copy
 import inspect
 import logging
-from typing import Dict, Optional
+from typing import Dict, Literal, Optional
 
 from morered.diffusion_schedule import DiffusionSchedule
 from morered.noise_schedules import NoiseSchedule
@@ -11,6 +11,7 @@ from torch_ema import ExponentialMovingAverage as EMA
 from schnetpack import properties
 from schnetpack.task import AtomisticTask, ModelOutput, UnsupervisedModelOutput
 from schnetpack.transform import CastTo32
+from schnetpack.model import NeuralNetworkPotential
 from torch import nn
 from torchmetrics import Metric
 
@@ -373,7 +374,6 @@ class ConsistencyModelOutput(ModelOutput):
             permutation = find_optimal_permutation(pred, target)
             target[self.target_property] = target[self.target_property][permutation]
 
-
         if self.rotation_invariant:
             target[properties.R] = rotate_optimally(pred, target)
 
@@ -453,9 +453,9 @@ class NormRegularizer(UnsupervisedModelOutput):
             weight_fn: the weight function to weight each sample based on target[weight_property].
             weight_property: the property name to use for the weight function.
         """
-        
+
         self.limit = limit
-        
+
         if metrics is None:
             metrics = {}
 
@@ -469,8 +469,9 @@ class NormRegularizer(UnsupervisedModelOutput):
 
         if self.loss_fn is None:
             return penalty
-        
+
         return self.loss_fn(penalty)
+
 
 class ConsitencyTask(AtomisticTask):
     """
@@ -623,16 +624,23 @@ class ConsitencyTask(AtomisticTask):
             on_step=is_train,
             on_epoch=not is_train,
             prog_bar=not is_train,
-            batch_size=batch_size
+            batch_size=batch_size,
         )
         self.log_metrics(pred, target, subset)
-        
+
         with torch.no_grad():
             target_magnitude = target["mu_pred"].norm(dim=1).mean()
-            self.log("target_magnitude", target_magnitude, on_epoch=True, batch_size=batch_size)
+            self.log(
+                "target_magnitude",
+                target_magnitude,
+                on_epoch=True,
+                batch_size=batch_size,
+            )
 
             pred_magnitude = pred["mu_pred"].norm(dim=1).mean()
-            self.log("pred_magnitude", pred_magnitude, on_epoch=True, batch_size=batch_size)
+            self.log(
+                "pred_magnitude", pred_magnitude, on_epoch=True, batch_size=batch_size
+            )
 
             # data_magnitude = batch["original__positions"].norm(dim=1).mean()
             # self.log("data_magnitude", data_magnitude, on_epoch=True, batch_size=batch_size)
