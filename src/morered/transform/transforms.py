@@ -154,6 +154,7 @@ class Diffuse(trn.Transform):
         t_low = 0 if self.include_t0 else 1
 
         t_high = round((self.diffusion_process.get_T() * self.diffusion_range))
+
         if self.diffusion_schedule is not None:
             t_high = self.diffusion_schedule.get_range()
 
@@ -167,7 +168,9 @@ class Diffuse(trn.Transform):
 
         if self.t1_bonus != 0:
             if (torch.rand(size=(1,)) < self.t1_bonus).all():
-                t[0] = 1
+                t = torch.tensor(1)
+                
+        return t
 
     def forward(self, inputs: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
