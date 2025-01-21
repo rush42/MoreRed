@@ -53,6 +53,7 @@ class ReverseODE:
 
         if isinstance(denoiser, str):
             self.denoiser = torch.load(self.denoiser, map_location=self.device).eval()
+            
         elif self.denoiser is not None:
             self.denoiser = self.denoiser.to(self.device).eval()
 
