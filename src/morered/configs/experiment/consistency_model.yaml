@@ -34,6 +34,7 @@ globals:
   time_target_key: t
   x_t_target_key: '_positions'
   denoiser_path: "${run.model_dir}/qm7x_ddpm.pt"
+  time_predictor_path: "${run.model_dir}/qm7x_time_predictor.pt"
   split_file_path: ${run.work_dir}/split.npz
   norm_regularization: 2.1
   diffusion_range: 0.5
@@ -132,6 +133,15 @@ task:
       name: ${globals.mean_output_key}
       limit: ${globals.norm_regularization}
       loss_weight: 1.0
+    # - _target_: morered.task.LPIPSOutput
+    #   source_model: ${globals.time_predictor_path}
+    #   loss_fn:
+    #     _target_: torch.nn.MSELoss
+    #   metrics:
+    #     mse:
+    #       _target_: torchmetrics.regression.MeanSquaredError
+    #       squared: true
+    #   loss_weight: 1.0
 
 model:
   _target_: morered.model.consistency_parametrization.ConsistencyParametrization
