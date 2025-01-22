@@ -257,4 +257,3 @@ class DiffusionTime(nn.Module):
             inputs[self.output_key] = inputs[self.output_key].squeeze(-1)
 
         return inputs
-    
