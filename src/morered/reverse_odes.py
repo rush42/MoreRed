@@ -113,7 +113,7 @@ class ReverseODE:
 
     @torch.no_grad()
     def inference_step(
-        self, inputs: Dict[str, torch.Tensor], t: Optional[torch.Tensor]
+        self, inputs: Dict[str, torch.Tensor], t: Optional[torch.Tensor] = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         One inference step for the model to get x_t_next.
@@ -124,7 +124,9 @@ class ReverseODE:
         """
 
         # append the normalized time step to the model input
-        if t is not None:
+        if t is None:
+            t = inputs[self.time_key]
+        else:
             inputs[self.time_key] = self.diffusion_process.normalize_time(t)
 
         # cast input to float for the denoiser
