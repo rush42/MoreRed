@@ -98,7 +98,7 @@ task:
   ema_decay: 0.99995
   initialize_with_denoiser: true
   skip_referenceless_batches: false
-  diffusion_schedule: ${globals.diffusion_schedule}
+  # diffusion_schedule: ${globals.diffusion_schedule}
   optimizer_args:
     lr: ${globals.lr}
     weight_decay: 0.0
@@ -203,7 +203,7 @@ data:
   - _target_: morered.transform.Diffuse
     diffuse_property: ${globals.x_t_target_key}
     diffusion_process: ${globals.diffusion_process}
-    diffusion_schedule: ${globals.diffusion_schedule}
+    # diffusion_schedule: ${globals.diffusion_schedule}
     time_key: ${globals.time_target_key}
     include_t0: ${globals.include_t0}
     t1_bonus: ${globals.t1_bonus}
