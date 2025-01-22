@@ -106,7 +106,7 @@ def _(mo):
 @app.cell
 def _(PolynomialSchedule, VPGaussianDDPM, torch):
     # define the noise schedule
-    T = 128
+    T = 200
     noise_schedule = PolynomialSchedule(T=T, s=1e-5, dtype=torch.float64, variance_type="lower_bound")
 
     # define the forward diffusion process
@@ -257,19 +257,19 @@ def _(T, diff_proc, properties, target, torch):
 @app.cell
 def _(properties, target):
     _n = target[properties.n_atoms][0]
-
+    power = 2
     def vector_norm_loss(target, pred):
         diff = pred['vector_representation'] - target['vector_representation']
-        return diff.detach().norm(dim=1).square().mean() / _n
+        return diff.detach().norm(dim=1).pow(power).mean() / _n
 
     def vector_loss(target, pred):
         diff = pred['vector_representation'] - target['vector_representation']
-        return diff.detach().norm().square() / _n
+        return diff.detach().norm().pow(power) / _n
 
     def scalar_loss(target, pred):
         diff = pred['scalar_representation'] - target['scalar_representation']
-        return diff.detach().norm().square() / _n
-    return scalar_loss, vector_loss, vector_norm_loss
+        return diff.detach().norm().pow(power) / _n
+    return power, scalar_loss, vector_loss, vector_norm_loss
 
 
 @app.cell
