@@ -36,7 +36,7 @@ globals:
   denoiser_path: "${run.model_dir}/qm7x_ddpm.pt"
   time_predictor_path: "${run.model_dir}/qm7x_time_predictor.pt"
   split_file_path: ${run.work_dir}/split.npz
-  norm_regularization: 2.1
+  norm_regularization: 0.0
   diffusion_range: 0.5
   monitor_metric: 'val_sampling_rmsd'
   T: 64

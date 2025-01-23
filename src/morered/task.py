@@ -468,6 +468,8 @@ class NormRegularizer(UnsupervisedModelOutput):
         super().__init__(metrics=metrics, **kwargs)
 
     def calculate_loss(self, pred, target=None):
+        if self.limit == 0.0:
+            return 0.0
         # average the norm over all atoms
         pred_magnitude = pred[self.name].norm(dim=1).mean()
         # truncate the loss at lower_limit
