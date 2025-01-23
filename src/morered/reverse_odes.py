@@ -125,7 +125,7 @@ class ReverseODE:
 
         # append the normalized time step to the model input
         if t is None:
-            t = inputs[self.time_key]
+            t = self.diffusion_process.unnormalize_time(inputs[self.time_key])
         else:
             inputs[self.time_key] = self.diffusion_process.normalize_time(t)
 
@@ -214,3 +214,40 @@ class ReverseODE:
         )
 
         return x_0, num_steps, hist
+
+class ReverseODEHeun(ReverseODE):
+    def __init__(**kwargs):
+        super().__init__(*kwargs)
+        
+    @torch.no_grad()
+    def inference_step(
+        self, inputs: Dict[str, torch.Tensor], t: Optional[torch.Tensor] = None
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        One inference step for the model to get x_t_next.
+
+        Args:
+            inputs: input data for noise prediction.
+            t: the unnormalized time step for each atom.
+        """
+
+        # either append the normalized time step to the model input or get t by unnormalizing form inputs[self.time_key]
+        if t is None:
+            t = self.diffusion_process.unnormalize_time(inputs[self.time_key])
+        else:
+            inputs[self.time_key] = self.diffusion_process.normalize_time(t)
+
+
+        if not isinstance(t, int) or t < 1 or t > self.diffusion_process.get_T():
+            raise ValueError(
+                "t must be one int between 1 and T that indicates the starting step."
+                "Sampling using different starting steps is not supported yet for DDPM."
+            )
+        
+        x_t_intermediate = super().inference_step(inputs, t)
+        t_intermediate = t - 1
+
+        x_t = (super().inference_step(x_t_intermediate, t_intermediate) + x_t_intermediate) / 2
+        x_t[t_intermediate == 0] = x_t_intermediate[t_intermediate == 0]
+        
+        return x_t
