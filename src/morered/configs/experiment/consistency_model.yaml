@@ -37,7 +37,7 @@ globals:
   time_predictor_path: "${run.model_dir}/qm7x_time_predictor.pt"
   split_file_path: ${run.work_dir}/split.npz
   norm_regularization: 0.0
-  diffusion_range: 0.5
+  diffusion_range: 1.0
   monitor_metric: 'val_sampling_rmsd'
   T: 64
 
