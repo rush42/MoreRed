@@ -216,6 +216,11 @@ class NoiseSchedule(nn.Module):
         Args:
             t: time steps.
         """
+        if torch.is_floating_point(t):
+            raise ValueError(
+                "Trying to  normalize a floating point tensor. Make sure t is of dtype int"
+            )
+        
         if (t < 0).any() or (t >= self.T).any():
             raise ValueError(
                 "t must be between 0 and T-1. This may be due to rounding errors. "
