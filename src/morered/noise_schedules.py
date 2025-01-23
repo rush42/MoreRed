@@ -1,5 +1,6 @@
 import logging
 from typing import Callable, Dict, Union
+import warnings
 
 import numpy as np
 import torch
@@ -218,7 +219,7 @@ class NoiseSchedule(nn.Module):
         """
         if torch.is_floating_point(t):
             raise ValueError(
-                "Trying to  normalize a floating point tensor. Make sure t is of dtype int"
+                "t must be integer."
             )
         
         if (t < 0).any() or (t >= self.T).any():
@@ -236,6 +237,9 @@ class NoiseSchedule(nn.Module):
         Args:
             t: normalized time steps.
         """
+        if not torch.is_floating_point(t):
+            raise ValueError("t must be either float or double.")
+        
         if (t < 0.0).any() or (t > 1.0).any():
             raise ValueError("t must be flaot between 0 and 1.")
 
@@ -257,7 +261,9 @@ class NoiseSchedule(nn.Module):
             t = t.reshape(1)
 
         # convert to integer and numpy
-        if t.dtype in [torch.float, torch.double]:
+        if torch.is_floating_point(t):
+            # TODO: maybe raise an error instead ?
+            warnings.warn("You passed a normalized `t`. It will get unnormalized.")
             t = self.unnormalize_time(t)
 
         t = t.to("cpu")
