@@ -308,7 +308,9 @@ class NoiseSchedule(nn.Module):
     def as_function(self, key: str) -> Callable[[torch.Tensor], torch.Tensor]:
         def fn(t: torch.Tensor) -> torch.Tensor:
             return self.forward(t, [key])[key]
+
         return fn
+
 
 class CosineSchedule(NoiseSchedule):
     """
