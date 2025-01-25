@@ -142,14 +142,14 @@ task:
     #     mse:
     #       _target_: torchmetrics.regression.MeanSquaredError
     #       squared: true
-    #   loss_weight: 1.0
+    #   loss_weight: 0.01
 
 model:
   _target_: morered.model.consistency_parametrization.ConsistencyParametrization
   time_key: ${globals.time_target_key}
   input_key: ${globals.x_t_target_key}
   output_key: ${globals.mean_output_key}
-  sigma_data: null
+  sigma_data: 0.00625
   source_model:
     _target_: schnetpack.model.NeuralNetworkPotential
     representation:
