@@ -678,7 +678,7 @@ class ConsitencyTask(AtomisticTask):
 
         # skip exploding batches in backward pass
         if self.skip_exploding_batches and (
-            torch.isnan(loss) or torch.isinf(loss) or loss > 1e10
+            torch.isnan(loss) or torch.isinf(loss) or loss > 0.015
         ):
             log.warning(
                 f"Loss is {loss} for train batch_idx {batch_idx} and training step "
