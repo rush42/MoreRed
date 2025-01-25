@@ -1,16 +1,22 @@
 import marimo
 
 __generated_with = "0.10.15"
-app = marimo.App()
+app = marimo.App(width="full", app_title="LPIPS Tinkering")
 
 
 @app.cell
 def _():
     import os
+    from pathlib import Path
     os.environ["OMP_NUM_THREADS"] = "6" # export OMP_NUM_THREADS=4
     os.environ["OPENBLAS_NUM_THREADS"] = "6" # export OPENBLAS_NUM_THREADS=4
     os.environ["MKL_NUM_THREADS"] = "6" # export MKL_NUM_THREADS=6
-    return (os,)
+    # Get the directory of the notebook
+    notebook_dir = Path().resolve()
+
+    # Change the current working directory to the notebook directory
+    os.chdir(notebook_dir)
+    return Path, notebook_dir, os
 
 
 @app.cell
@@ -77,7 +83,7 @@ def _(mo):
 @app.cell
 def _():
     # path to store the dataset as ASE '.db' files
-    split_file_path = "./split.npz"
+    split_file_path = "../split.npz"
 
     # model path
     models_path = "../models"
@@ -106,7 +112,7 @@ def _(mo):
 @app.cell
 def _(PolynomialSchedule, VPGaussianDDPM, torch):
     # define the noise schedule
-    T = 200
+    T = 400
     noise_schedule = PolynomialSchedule(T=T, s=1e-5, dtype=torch.float64, variance_type="lower_bound")
 
     # define the forward diffusion process
