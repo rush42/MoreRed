@@ -99,6 +99,7 @@ task:
   ema_decay: 0.99995
   initialize_with_denoiser: true
   skip_referenceless_batches: false
+  skip_exploding_batches: true
   # diffusion_schedule: ${globals.diffusion_schedule}
   optimizer_args:
     lr: ${globals.lr}
@@ -141,7 +142,7 @@ task:
     #     mse:
     #       _target_: torchmetrics.regression.MeanSquaredError
     #       squared: true
-    #   loss_weight: 0.01
+    #   loss_weight: 1.0
 
 model:
   _target_: morered.model.consistency_parametrization.ConsistencyParametrization
