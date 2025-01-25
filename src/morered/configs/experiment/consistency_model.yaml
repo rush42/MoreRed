@@ -141,7 +141,7 @@ task:
     #     mse:
     #       _target_: torchmetrics.regression.MeanSquaredError
     #       squared: true
-    #   loss_weight: 1.0
+    #   loss_weight: 0.01
 
 model:
   _target_: morered.model.consistency_parametrization.ConsistencyParametrization
