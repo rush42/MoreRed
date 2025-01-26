@@ -514,6 +514,7 @@ class ConsitencyTask(AtomisticTask):
         cutoff: float = 500.0,
         recompute_neighbors: bool = True,
         skip_exploding_batches: bool = True,
+        loss_limit: float = 5e-2,
         skip_referenceless_batches: bool = True,
         initialize_with_denoiser: bool = False,
         diffusion_schedule: Optional[DiffusionSchedule] = None,
@@ -532,6 +533,7 @@ class ConsitencyTask(AtomisticTask):
         self.reverse_ode = reverse_ode
         self.caster = caster
         self.cutoff = cutoff
+        self.loss_limit = loss_limit
         self.recompute_neighbors = recompute_neighbors
         self.skip_exploding_batches = skip_exploding_batches
         self.skip_referenceless_batches = skip_referenceless_batches
@@ -695,7 +697,7 @@ class ConsitencyTask(AtomisticTask):
 
         # skip exploding batches in backward pass
         if self.skip_exploding_batches and (
-            torch.isnan(loss) or torch.isinf(loss) or loss > 0.05
+            torch.isnan(loss) or torch.isinf(loss) or loss > self.loss_limit
         ):
             log.warning(
                 f"Loss is {loss} for train batch_idx {batch_idx} and training step "
