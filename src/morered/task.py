@@ -392,9 +392,10 @@ class ConsistencyModelOutput(ModelOutput):
         return self.loss_weight * loss
 
 
-class LPIPSOutput(ModelOutput):
+class LRSOutput(ModelOutput):
     """
-    define consistency output head.
+    define "Learned Representation Similarity" output.
+    Inspired  by "LPIPS" this output works with molecule representations of a pretrained model.
     """
 
     def __init__(
