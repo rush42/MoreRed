@@ -400,7 +400,8 @@ class LPIPSOutput(ModelOutput):
     def __init__(
         self,
         source_model: Union[NeuralNetworkPotential, str],
-        name: Literal[
+        name: str,
+        representation_name: Literal[
             "vector_representation", "scalar_representation"
         ] = "scalar_representation",
         **kwargs,
@@ -410,12 +411,15 @@ class LPIPSOutput(ModelOutput):
             model: the model to use for the representation.
         """
         super().__init__(name=name, **kwargs)
+        self.representation_name = representation_name
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+        # load the model if given as a path
         if isinstance(source_model, str):
             source_model = torch.load(source_model, map_location=device)
 
+        # construct the representation for loss calulation by replacing the output_modules with an identity layer
         model_output = nn.Identity()
         model_output.to(device)
         model_output.model_outputs = ["vector_representation", "scalar_representation"]
@@ -425,6 +429,7 @@ class LPIPSOutput(ModelOutput):
             representation=source_model.representation,
             output_modules=nn.ModuleList([model_output]),
         )
+
         # freeze the representation
         for param in self.representation.parameters():
             param.requires_grad = False
@@ -439,10 +444,22 @@ class LPIPSOutput(ModelOutput):
             pred: outputs.
             target: target values.
         """
-        return self.loss_fn(
-            self.representation.forward(pred)[self.name],
-            self.representation.forward(target)[self.name],
+        # map model output to positions
+        pred[properties.R] = pred[self.name]
+        target[properties.R] = target[self.name]
+
+        # compute pred and target representation
+        pred_representation = self.representation.forward(pred)
+        with torch.no_grad():
+            target_representation = self.representation.forward(target)
+
+        # calculate the loss
+        loss = self.loss_fn(
+            pred_representation[self.representation_name],
+            target_representation[self.representation_name],
         )
+
+        return loss
 
 
 
