@@ -104,6 +104,7 @@ task:
   initialize_with_denoiser: true
   skip_referenceless_batches: false
   skip_exploding_batches: true
+  loss_limit: 0.5
   # diffusion_schedule: ${globals.diffusion_schedule}
   optimizer_args:
     lr: ${globals.lr}
