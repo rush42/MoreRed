@@ -598,8 +598,8 @@ class ConsitencyTask(AtomisticTask):
         dtype = batch_hat[self.x_t_key].dtype
 
         # calculate t_next in normalized space
-        t1 = self.normalize_time(torch.tensor(1))
-        t_next = batch_hat[self.time_key] - t1
+        t_1 = self.normalize_time(torch.tensor(1))
+        t_next = batch_hat[self.time_key] - t_1
 
         # take one step of the reverse ODE for every t > 1
         x_t_next = self.reverse_ode.inference_step(input).to(dtype=dtype)

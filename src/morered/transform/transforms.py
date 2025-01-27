@@ -112,9 +112,9 @@ class Diffuse(trn.Transform):
         diffuse_property: str,
         diffusion_process: DiffusionProcess,
         output_key: Optional[str] = None,
-        include_t0: bool = True,
+        include_t_0: bool = True,
         time_key: str = "t",
-        t1_bonus: int = 0.0,
+        t_1_bonus: int = 0.0,
         diffusion_range: float = 1.0,
         diffusion_schedule: Optional[DiffusionSchedule] = None,
     ):
@@ -125,8 +125,8 @@ class Diffuse(trn.Transform):
             output_key: key to store the diffused property.
                         if None, the diffuse_property key is used.
             time_key: key to save the normalized diffusion time step.
-            include_t0: whether to produce undiffused samples
-            t1_bonus: probability to favor t1 
+            include_t_0: whether to produce undiffused samples
+            t_1_bonus: probability to favor t_1 
             diffusion_range: a fraction which determines the maximum diffusion
         """
         super().__init__()
@@ -134,8 +134,8 @@ class Diffuse(trn.Transform):
         self.diffusion_process = diffusion_process
         self.output_key = output_key
         self.time_key = time_key
-        self.include_t0 = include_t0
-        self.t1_bonus = t1_bonus
+        self.include_t_0 = include_t_0
+        self.t_1_bonus = t_1_bonus
         if diffusion_range < 0 or diffusion_range > 1:
             raise "diffusion_range needs to be between 0 and 1"
         self.diffusion_range = diffusion_range
@@ -151,7 +151,7 @@ class Diffuse(trn.Transform):
             )
             
     def sample_t(self, device):
-        t_low = 0 if self.include_t0 else 1
+        t_low = 0 if self.include_t_0 else 1
 
         t_high = round((self.diffusion_process.get_T() * self.diffusion_range))
 
@@ -166,8 +166,8 @@ class Diffuse(trn.Transform):
             device=device,
         )
 
-        if self.t1_bonus != 0:
-            if (torch.rand(size=(1,)) < self.t1_bonus).all():
+        if self.t_1_bonus != 0:
+            if (torch.rand(size=(1,)) < self.t_1_bonus).all():
                 t = torch.tensor(1)
                 
         return t

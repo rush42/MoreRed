@@ -25,8 +25,8 @@ globals:
   lr: 1.0e-4
   permutation_invariant: true
   rotation_invariant: false
-  include_t0: false
-  t1_bonus: 0.0
+  include_t_0: false
+  t_1_bonus: 0.0
   n_atom_basis: 256
   noise_target_key: eps
   noise_output_key: eps_pred
@@ -222,8 +222,8 @@ data:
     diffusion_process: ${globals.diffusion_process}
     # diffusion_schedule: ${globals.diffusion_schedule}
     time_key: ${globals.time_target_key}
-    include_t0: ${globals.include_t0}
-    t1_bonus: ${globals.t1_bonus}
+    include_t_0: ${globals.include_t_0}
+    t_1_bonus: ${globals.t_1_bonus}
     diffusion_range: ${globals.diffusion_range}
 
   - _target_: morered.transform.AllToAllNeighborList

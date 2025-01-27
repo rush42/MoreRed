@@ -19,7 +19,7 @@ class DiffusionSchedule(nn.Module):
         """
         Args:
             T: number of timesteps.
-            include_t0: whether to include 
+            include_t_0: whether to include 
         """
         super().__init__()
         self.T = T
