@@ -8,6 +8,7 @@ from schnetpack import properties
 
 from morered.diffusion_schedule import DiffusionSchedule
 from morered.processes.base import DiffusionProcess
+from morered.processes.functional import sample_isotropic_Gaussian
 from morered.utils import batch_center_systems
 
 __all__ = [
@@ -17,6 +18,8 @@ __all__ = [
 ]
 
 epoch = 0
+
+
 class AllToAllNeighborList(trn.NeighborListTransform):
     """
     Calculate a full neighbor list for all atoms in the system.
@@ -126,7 +129,7 @@ class Diffuse(trn.Transform):
                         if None, the diffuse_property key is used.
             time_key: key to save the normalized diffusion time step.
             include_t_0: whether to produce undiffused samples
-            t_1_bonus: probability to favor t_1 
+            t_1_bonus: probability to favor t_1
             diffusion_range: a fraction which determines the maximum diffusion
         """
         super().__init__()
@@ -149,7 +152,7 @@ class Diffuse(trn.Transform):
                 "Diffusing atom positions R without invariant constraint"
                 "(invariant=False) might lead to unexpected results."
             )
-            
+
     def sample_t(self, device):
         t_low = 0 if self.include_t_0 else 1
 
@@ -169,7 +172,7 @@ class Diffuse(trn.Transform):
         if self.t_1_bonus != 0:
             if (torch.rand(size=(1,)) < self.t_1_bonus).all():
                 t = torch.tensor(1)
-                
+
         return t
 
     def forward(self, inputs: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
@@ -180,7 +183,7 @@ class Diffuse(trn.Transform):
             inputs: dictionary of input tensors as in SchNetPack.
         """
         x_0 = inputs[self.diffuse_property]
-        
+
         # save the original value.
         outputs = {
             f"original_{self.diffuse_property}": x_0,
@@ -209,5 +212,76 @@ class Diffuse(trn.Transform):
 
         # update the returned inputs.
         inputs.update(outputs)
+
+        return inputs
+
+class ScoreEstimator(trn.Transform):
+    """
+    The unbiased score estimator proposed by Song et. al. 2022.
+    This is meant to be used in conjunction with the above `Diffuse` transfrom.
+    """
+
+    is_preprocessor: bool = True
+    is_postprocessor: bool = False
+
+    def __init__(
+        self,
+        diffuse_property: str,
+        diffusion_process: DiffusionProcess,
+        output_key: str,
+        time_output_key: str,
+        time_key: str = "t",
+    ):
+        """
+        Args:
+            diffuse_property: molecular property to diffuse.
+            diffusion_process: the forward diffusion process to use.
+            output_key: key to store the diffused property.
+                        if None, the diffuse_property key is used.
+            time_key: key to save the normalized diffusion time step.
+        """
+        super().__init__()
+        self.diffuse_property = diffuse_property
+        self.diffusion_process = diffusion_process
+        self.output_key = output_key
+        self.time_output_key = time_output_key
+        self.time_key = time_key
+        self.noise_key = self.diffusion_process.noise_key
+        # Sanity check
+        if (
+            not self.diffusion_process.invariant
+            and self.diffuse_property == properties.R
+        ):
+            logging.error(
+                "Diffusing atom positions R without invariant constraint"
+                "(invariant=False) might lead to unexpected results."
+            )
+
+    def forward(self, inputs: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        Define the forward diffusion transformation.
+
+        Args:
+            inputs: dictionary of input tensors as in SchNetPack.
+        """
+
+        # get x_0, t and noise from inputs
+        x_0 = inputs[f"original_{self.diffuse_property}"].to(self.dtype)
+        t = inputs[self.time_key]
+        noise = inputs[self.noise_key]
+
+        # take one step towards the data in normalized space
+        t_1 = self.diffusion_process.normalize_time(torch.tensor(1))
+        t_next = t - t_1
+
+        # query noise parameters.
+        mean, std = self.perturbation_kernel(x_0, t_next)
+
+        # sample by Gaussian diffusion.
+        (x_t_next,) = sample_isotropic_Gaussian(
+            mean, std, invariant=self.invariant, idx_m=None, noise=noise
+        )
+
+        inputs.update({self.output_key: x_t_next, self.time_output_key: t_next})
 
         return inputs
