@@ -66,6 +66,9 @@ globals:
     time_key: ${globals.time_target_key}
     denoiser: ${globals.denoiser_path}
     cutoff: ${globals.cutoff}
+  # profiler: 
+  #   _target_: pytorch_lightning.profiler.AdvancedProfiler
+  #   path: ${run.dir}
 
 trainer:
   _target_: pytorch_lightning.Trainer
@@ -74,6 +77,7 @@ trainer:
   max_epochs: 10000
   enable_model_summary: true
   profiler: null
+  # profiler: ${globals.profiler}
   # gradient_clip_val: 5.0
   accumulate_grad_batches: 1
   val_check_interval: 1.0
