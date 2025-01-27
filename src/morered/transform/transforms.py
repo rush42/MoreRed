@@ -17,9 +17,6 @@ __all__ = [
     "Diffuse",
 ]
 
-epoch = 0
-
-
 class AllToAllNeighborList(trn.NeighborListTransform):
     """
     Calculate a full neighbor list for all atoms in the system.
