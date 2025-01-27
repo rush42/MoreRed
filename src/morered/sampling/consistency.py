@@ -26,7 +26,7 @@ class ConsistencySampler(MoreRedAS):
         time_predictor: Union[None, str, nn.Module] = None,
         time_key: str = "t",
         time_pred_key: str = "t_pred",
-        mean_pred_key: str = "mu_pred",
+        mean_pred_key: str = "x_0_pred",
         cutoff: float = 5.0,
         recompute_neighbors: bool = False,
         save_progress: bool = False,

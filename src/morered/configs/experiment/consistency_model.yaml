@@ -30,7 +30,7 @@ globals:
   n_atom_basis: 256
   noise_target_key: eps
   noise_output_key: eps_pred
-  mean_output_key: mu_pred
+  x_0_output_key: x_0_pred
   time_target_key: t
   x_t_target_key: '_positions'
   denoiser_path: "${run.model_dir}/qm7x_ddpm.pt"
@@ -125,7 +125,7 @@ task:
   x_t_key: ${globals.x_t_target_key}
   outputs:
     # - _target_: morered.task.ConsistencyModelOutput
-    #   name: ${globals.mean_output_key}
+    #   name: ${globals.x_0_output_key}
     #   permutation_invariant: ${globals.permutation_invariant}
     #   rotation_invariant: ${globals.rotation_invariant}
     #   loss_fn:
@@ -136,11 +136,11 @@ task:
     #       squared: true
     #   loss_weight: 1.0
     # - _target_: morered.task.NormRegularizer
-    #   name: ${globals.mean_output_key}
+    #   name: ${globals.x_0_output_key}
     #   limit: ${globals.norm_regularization}
     #   loss_weight: 1.0
     - _target_: morered.task.LRSOutput
-      name: ${globals.mean_output_key}
+      name: ${globals.x_0_output_key}
       source_model: ${globals.time_predictor_path}
       loss_fn:
         _target_: torch.nn.MSELoss
@@ -154,7 +154,7 @@ model:
   _target_: morered.model.consistency_parametrization.ConsistencyParametrization
   time_key: ${globals.time_target_key}
   input_key: ${globals.x_t_target_key}
-  output_key: ${globals.mean_output_key}
+  output_key: ${globals.x_0_output_key}
   sigma_data: 0.00625
   source_model:
     _target_: schnetpack.model.NeuralNetworkPotential
@@ -180,7 +180,7 @@ model:
       n_in: ${globals.n_atom_basis}
       n_hidden: null
       n_layers: 3
-      output_key: ${globals.mean_output_key}
+      output_key: ${globals.x_0_output_key}
       include_time: true
       time_head: null
       detach_time_head: false
@@ -190,7 +190,7 @@ model:
 
     postprocessors:
     - _target_: morered.transform.BatchSubtractCenterOfMass
-      name: ${globals.mean_output_key}
+      name: ${globals.x_0_output_key}
 
 data:
   _target_: morered.datasets.QM7X
