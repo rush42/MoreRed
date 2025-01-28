@@ -1,4 +1,5 @@
 from abc import abstractmethod
+import logging
 from typing import Dict, List, Tuple, Union, Optional
 
 import torch
@@ -7,14 +8,30 @@ from torch import nn
 from tqdm import tqdm
 
 from morered.processes import DiffusionProcess
+from morered.processes.functional import sample_isotropic_Gaussian
 from morered.utils import compute_neighbors, scatter_mean
 
 __all__ = ["ReverseODE", "ReverseODEEuler", "ReverseODEHeun"]
 
 
-class ReverseODE:
+class ReverseProcess(nn.Module):
     """
-    Abstract Class for ReverseODEs.
+    Abstract Class for reverse processes.
+    """
+    @abstractmethod 
+    def __init__(self, diffusion_process: DiffusionProcess, time_key: str = "t"):
+        pass
+
+    @abstractmethod
+    def inference_step(
+        self, inputs: Dict[str, torch.Tensor], t: Optional[torch.Tensor] = None
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        pass
+
+
+class ReverseODE(ReverseProcess):
+    """
+    Reverse process defined through an ODE.
     """
 
     def __init__(
@@ -53,7 +70,7 @@ class ReverseODE:
 
         if isinstance(denoiser, str):
             self.denoiser = torch.load(self.denoiser, map_location=self.device).eval()
-            
+
         elif self.denoiser is not None:
             self.denoiser = self.denoiser.to(self.device).eval()
 
@@ -215,6 +232,7 @@ class ReverseODE:
 
         return x_0, num_steps, hist
 
+
 class ReverseODEHeun(ReverseODE):
     @torch.no_grad()
     def inference_step(
@@ -233,11 +251,79 @@ class ReverseODEHeun(ReverseODE):
             t = self.diffusion_process.unnormalize_time(inputs[self.time_key])
         else:
             inputs[self.time_key] = self.diffusion_process.normalize_time(t)
-        
+
         x_t_intermediate = super().inference_step(inputs, t)
         t_intermediate = t - 1
 
-        x_t = (super().inference_step(x_t_intermediate, t_intermediate) + x_t_intermediate) / 2
+        x_t = (
+            super().inference_step(x_t_intermediate, t_intermediate) + x_t_intermediate
+        ) / 2
         x_t[t_intermediate == 0] = x_t_intermediate[t_intermediate == 0]
-        
+
         return x_t
+
+class ReverseUnbiasedEstimator(ReverseProcess):
+    """
+    The unbiased score estimator proposed by Song et. al. 2022.
+    This is meant to be used in conjunction with the above `Diffuse` transfrom.
+    """
+    def __init__(
+        self,
+        diffuse_property: str,
+        diffusion_process: DiffusionProcess,
+        output_key: str,
+        time_output_key: str,
+        time_key: str = "t",
+    ):
+        """
+        Args:
+            diffuse_property: molecular property to diffuse.
+            diffusion_process: the forward diffusion process to use.
+            output_key: key to store the diffused property.
+                        if None, the diffuse_property key is used.
+            time_key: key to save the normalized diffusion time step.
+        """
+        super().__init__()
+        self.diffuse_property = diffuse_property
+        self.diffusion_process = diffusion_process
+        self.output_key = output_key
+        self.time_output_key = time_output_key
+        self.time_key = time_key
+        self.noise_key = self.diffusion_process.noise_key
+
+        # Sanity check
+        if (
+            not self.diffusion_process.invariant
+            and self.diffuse_property == properties.R
+        ):
+            logging.error(
+                "Diffusing atom positions R without invariant constraint"
+                "(invariant=False) might lead to unexpected results."
+            )
+
+    def forward(self, inputs: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        Define the forward diffusion transformation.
+
+        Args:
+            inputs: dictionary of input tensors as in SchNetPack.
+        """
+
+        # get x_0, t and noise from inputs
+        x_0 = inputs[f"original_{self.diffuse_property}"].to(self.dtype)
+        t = inputs[self.time_key]
+        noise = inputs[self.noise_key]
+
+        # take one step towards the data in normalized space
+        t_1 = self.diffusion_process.normalize_time(torch.tensor(1))
+        t_next = t - t_1
+
+        # query noise parameters.
+        mean, std = self.perturbation_kernel(x_0, t_next)
+
+        # sample by Gaussian diffusion.
+        (x_t_next,) = sample_isotropic_Gaussian(
+            mean, std, invariant=self.invariant, idx_m=None, noise=noise
+        )
+
+        return x_t_next
