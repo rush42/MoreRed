@@ -302,6 +302,7 @@ class ReverseUnbiasedEstimator(ReverseProcess):
                 "(invariant=False) might lead to unexpected results."
             )
 
+    @torch.no_grad()
     def forward(self, inputs: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
         Define the forward diffusion transformation.
