@@ -673,7 +673,7 @@ class ConsitencyTask(AtomisticTask):
 
             x_delta = batch[properties.R] - batch_hat[properties.R]
             x_delta_magnitude = x_delta.norm(dim=1).mean()
-            self.log("x_delta_magnitude", x_delta_magnitude, on_epoch=False, on_step=False, batch_size=batch_size)
+            self.log("x_delta_magnitude", x_delta_magnitude, on_epoch=False, on_step=True, batch_size=batch_size)
 
             # data_magnitude = batch["original__positions"].norm(dim=1).mean()
             # self.log("data_magnitude", data_magnitude, on_epoch=True, batch_size=batch_size)
