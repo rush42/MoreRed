@@ -1,3 +1,4 @@
+from functools import partial
 import logging
 from typing import Callable, Dict, Union
 import warnings
@@ -117,7 +118,7 @@ class NoiseSchedule(nn.Module):
     def __init__(
         self,
         T: int,
-        alphas_bar: Union[np.ndarray, list],
+        alphas_bar_function: callable,
         variance_type: str = "lower_bound",
         dtype: torch.dtype = torch.float64,
     ):
@@ -132,7 +133,7 @@ class NoiseSchedule(nn.Module):
         super().__init__()
 
         self.T = T
-        self.alphas_bar = torch.tensor(alphas_bar, dtype=torch.float64, device="cpu")
+        self.alpha_bar_function = alphas_bar_function
         self.variance_type = variance_type
         self.dtype = dtype
 
@@ -159,7 +160,9 @@ class NoiseSchedule(nn.Module):
         """
         Pre-compute the noise parameters based on the notation of Ho et al.
         """
-
+        self.alphas_bar = torch.tensor(
+            self.alpha_bar_function(self.T), dtype=torch.float64, device="cpu"
+        )
         self.betas_bar = 1 - self.alphas_bar
         self.sqrt_alphas_bar = torch.sqrt(self.alphas_bar)
         self.sqrt_betas_bar = torch.sqrt(
@@ -210,6 +213,10 @@ class NoiseSchedule(nn.Module):
             2 * self.sigmas_square * self.alphas * self.betas_bar
         )
 
+    def update_T(self, T: int):
+        self.T = T
+        self.pre_compute_statistics()
+
     def normalize_time(self, t: torch.Tensor) -> torch.Tensor:
         """
         Normalizes the time t to [0, 1].
@@ -218,10 +225,8 @@ class NoiseSchedule(nn.Module):
             t: time steps.
         """
         if torch.is_floating_point(t):
-            raise ValueError(
-                "t must be integer."
-            )
-        
+            raise ValueError("t must be integer.")
+
         if (t < 0).any() or (t >= self.T).any():
             raise ValueError(
                 "t must be between 0 and T-1. This may be due to rounding errors. "
@@ -239,7 +244,7 @@ class NoiseSchedule(nn.Module):
         """
         if not torch.is_floating_point(t):
             raise ValueError("t must be either float or double.")
-        
+
         if (t < 0.0).any() or (t > 1.0).any():
             raise ValueError("t must be flaot between 0 and 1.")
 
@@ -345,11 +350,13 @@ class CosineSchedule(NoiseSchedule):
         self.s = s
         self.v = v
         self.clip_value = clip_value
-        alphas_bar = cosine_decay(T, s=self.s, v=self.v, clip_value=self.clip_value)
+        alpha_bar_function = partial(
+            cosine_decay, s=self.s, v=self.v, clip_value=self.clip_value
+        )
 
         super().__init__(
             T,
-            alphas_bar,
+            alpha_bar_function,
             variance_type=variance_type,
             **kwargs,
         )
@@ -379,11 +386,11 @@ class PolynomialSchedule(NoiseSchedule):
         """
         self.s = s
         self.clip_value = clip_value
-        alphas_bar = polynomial_decay(T, s=s, clip_value=clip_value)
+        alpha_bar_function = partial(polynomial_decay, s=s, clip_value=clip_value)
 
         super().__init__(
             T,
-            alphas_bar,
+            alpha_bar_function,
             variance_type=variance_type,
             **kwargs,
         )
@@ -413,11 +420,13 @@ class LinearSchedule(NoiseSchedule):
         """
         self.beta_start = beta_start
         self.beta_end = beta_end
-        alphas_bar = linear_decay(T, beta_start=beta_start, beta_end=beta_end)
+        alpha_bar_function = partial(
+            linear_decay, beta_start=beta_start, beta_end=beta_end
+        )
 
         super().__init__(
             T,
-            alphas_bar,
+            alpha_bar_function,
             variance_type=variance_type,
             **kwargs,
         )
