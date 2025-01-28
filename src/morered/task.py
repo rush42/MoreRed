@@ -15,7 +15,7 @@ from schnetpack.model import NeuralNetworkPotential
 from torch import nn
 from torchmetrics import Metric
 
-from morered.reverse_odes import ReverseODE
+from morered.reverse_process import ReverseODE
 
 log = logging.getLogger(__name__)
 

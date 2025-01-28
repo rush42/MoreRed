@@ -41,7 +41,7 @@ def _():
     from morered.processes import VPGaussianDDPM
     from morered.utils import scatter_mean, check_validity, generate_bonds_data, batch_center_systems, batch_rmsd
     from morered.sampling import DDPM, MoreRedJT, MoreRedAS, MoreRedITP, ConsistencySampler
-    from morered.reverse_odes import ReverseODE, ReverseODEHeun
+    from morered.reverse_process import ReverseODE, ReverseODEHeun
     return (
         Atoms,
         ConsistencySampler,

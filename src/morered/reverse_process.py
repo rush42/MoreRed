@@ -11,7 +11,7 @@ from morered.processes import DiffusionProcess
 from morered.processes.functional import sample_isotropic_Gaussian
 from morered.utils import compute_neighbors, scatter_mean
 
-__all__ = ["ReverseODE", "ReverseODEEuler", "ReverseODEHeun"]
+__all__ = ["ReverseProcess", "ReverseODE", "ReverseODEHeun", "ReverseUnbiasedEstimator"]
 
 
 class ReverseProcess(nn.Module):
