@@ -20,10 +20,11 @@ class ReverseProcess(nn.Module):
     """
     @abstractmethod 
     def __init__(self, diffusion_process: DiffusionProcess, time_key: str = "t"):
+        self.diffusion_process = diffusion_process
         pass
 
     @abstractmethod
-    def inference_step(
+    def forward(
         self, inputs: Dict[str, torch.Tensor], t: Optional[torch.Tensor] = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         pass
@@ -129,7 +130,7 @@ class ReverseODE(ReverseProcess):
         return batch
 
     @torch.no_grad()
-    def inference_step(
+    def forward(
         self, inputs: Dict[str, torch.Tensor], t: Optional[torch.Tensor] = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -203,7 +204,7 @@ class ReverseODE(ReverseProcess):
             # current reverse time step
             time_steps = self.get_time_steps(inputs, i)
 
-            x_t_next = self.inference_step(batch, time_steps)
+            x_t_next = self(batch, time_steps)
 
             # save history if required. Must be done before the reverse step.
             if self.save_progress and (i % self.progress_stride == 0):
@@ -235,7 +236,7 @@ class ReverseODE(ReverseProcess):
 
 class ReverseODEHeun(ReverseODE):
     @torch.no_grad()
-    def inference_step(
+    def forward(
         self, inputs: Dict[str, torch.Tensor], t: Optional[torch.Tensor] = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -252,11 +253,11 @@ class ReverseODEHeun(ReverseODE):
         else:
             inputs[self.time_key] = self.diffusion_process.normalize_time(t)
 
-        x_t_intermediate = super().inference_step(inputs, t)
+        x_t_intermediate = super()(inputs, t)
         t_intermediate = t - 1
 
         x_t = (
-            super().inference_step(x_t_intermediate, t_intermediate) + x_t_intermediate
+            super()(x_t_intermediate, t_intermediate) + x_t_intermediate
         ) / 2
         x_t[t_intermediate == 0] = x_t_intermediate[t_intermediate == 0]
 

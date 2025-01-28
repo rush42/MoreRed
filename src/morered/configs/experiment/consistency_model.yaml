@@ -59,7 +59,7 @@ globals:
     noise_key: ${globals.noise_target_key}
     dtype: float64
 
-  reverse_ode:
+  reverse_process:
     _target_: morered.reverse_process.ReverseODE
     diffusion_process: ${globals.diffusion_process}
     noise_pred_key: ${globals.noise_output_key}
@@ -98,7 +98,7 @@ trainer:
 
 task:
   _target_: morered.ConsitencyTask
-  reverse_ode: ${globals.reverse_ode}
+  reverse_process: ${globals.reverse_process}
   optimizer_cls: torch.optim.AdamW
   ema_decay: 0.99995
   initialize_with_denoiser: true

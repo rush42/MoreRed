@@ -15,7 +15,7 @@ from schnetpack.model import NeuralNetworkPotential
 from torch import nn
 from torchmetrics import Metric
 
-from morered.reverse_process import ReverseODE
+from morered.reverse_process import ReverseODE, ReverseProcess
 
 log = logging.getLogger(__name__)
 
@@ -507,7 +507,7 @@ class ConsitencyTask(AtomisticTask):
     def __init__(
         self,
         model: nn.Module,
-        reverse_ode: ReverseODE,
+        reverse_process: ReverseProcess,
         time_key: str = "t",
         x_t_key: str = "_positions",
         ema_decay=0.9999,
@@ -531,7 +531,7 @@ class ConsitencyTask(AtomisticTask):
         self.time_key = time_key
         self.x_t_key = x_t_key
         self.ema_decay = ema_decay
-        self.reverse_ode = reverse_ode
+        self.reverse_process = reverse_process
         self.caster = caster
         self.cutoff = cutoff
         self.loss_limit = loss_limit
@@ -543,15 +543,15 @@ class ConsitencyTask(AtomisticTask):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         if initialize_with_denoiser:
-            model.source_model.load_state_dict(self.reverse_ode.denoiser.state_dict())
+            model.source_model.load_state_dict(self.reverse_process.denoiser.state_dict())
 
         # create target and online model
         self.model = model
         self.model.to(device=device)
         self.ema = EMA(model.parameters(), decay=ema_decay)
 
-        self.normalize_time = self.reverse_ode.diffusion_process.normalize_time
-        self.unnormalize_time = self.reverse_ode.diffusion_process.unnormalize_time
+        self.normalize_time = self.reverse_process.diffusion_process.normalize_time
+        self.unnormalize_time = self.reverse_process.diffusion_process.unnormalize_time
 
     def setup(self, stage=None):
         """
@@ -602,7 +602,7 @@ class ConsitencyTask(AtomisticTask):
         t_next = batch_hat[self.time_key] - t_1
 
         # take one step of the reverse ODE for every t > 1
-        x_t_next = self.reverse_ode.inference_step(input).to(dtype=dtype)
+        x_t_next = self.reverse_process(input).to(dtype=dtype)
 
         # for all t=0 use the original positions
         x_t_next[t_next == 0] = batch_hat[f"original_{self.x_t_key}"][t_next == 0]
