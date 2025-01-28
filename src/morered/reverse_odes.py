@@ -216,9 +216,6 @@ class ReverseODE:
         return x_0, num_steps, hist
 
 class ReverseODEHeun(ReverseODE):
-    def __init__(**kwargs):
-        super().__init__(*kwargs)
-        
     @torch.no_grad()
     def inference_step(
         self, inputs: Dict[str, torch.Tensor], t: Optional[torch.Tensor] = None
@@ -236,13 +233,6 @@ class ReverseODEHeun(ReverseODE):
             t = self.diffusion_process.unnormalize_time(inputs[self.time_key])
         else:
             inputs[self.time_key] = self.diffusion_process.normalize_time(t)
-
-
-        if not isinstance(t, int) or t < 1 or t > self.diffusion_process.get_T():
-            raise ValueError(
-                "t must be one int between 1 and T that indicates the starting step."
-                "Sampling using different starting steps is not supported yet for DDPM."
-            )
         
         x_t_intermediate = super().inference_step(inputs, t)
         t_intermediate = t - 1
