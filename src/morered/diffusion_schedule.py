@@ -1,7 +1,9 @@
+import math
 from torch import nn
 
 # global variable to access from different threads
-epoch = 0
+step = 0
+
 
 class DiffusionSchedule(nn.Module):
     """
@@ -11,31 +13,32 @@ class DiffusionSchedule(nn.Module):
 
     def __init__(
         self,
-        T: int,
-        start: int = 1,
-        step_size: int = 1,
-        every_n_epochs: int = 5,
+        mu_0: float = 0.9,
+        T_0: int = 2,
+        T_1: int = 64,
+        K: int = 1e5,
     ):
         """
         Args:
-            T: number of timesteps.
-            include_t_0: whether to include 
+            mu_0: the initial 
         """
         super().__init__()
-        self.T = T
-        self.start = start
-        self.every_n_epochs = every_n_epochs
-        self.step_size = step_size
+        self.mu_0 = mu_0
+        self.T_0 = T_0
+        self.T_1 = T_1
+        self.K = K
 
-    def get_range(self):
-        T_bar = self.start
-        T_bar += self.step_size * (epoch // self.every_n_epochs)
-        if T_bar < self.T:
-            return T_bar
-        
-        return self.T
+    def get_T(self):
+        global step
+        return math.ceil(
+            math.sqrt(
+                step / self.K((self.T_1 + 1) ** 2 - self.T_0**2) + self.T_0**2 - 1
+            )
+        )
     
-    
-    def increase_epoch(self):
-        global epoch
-        epoch += 1
+    def get_mu(self):
+        math.exp(self.T_0 * math.log(self.mu_0) / self.get_T())
+
+    def increase_step(self):
+        global step
+        step += 1

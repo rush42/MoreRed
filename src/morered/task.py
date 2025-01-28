@@ -709,6 +709,9 @@ class ConsitencyTask(AtomisticTask):
                 f"{self.global_step}, training step will be skipped!"
             )
             return None
+        
+        if self.diffusion_schedule is not None:
+            self.diffusion_schedule.increase_step()
 
         return loss
 
@@ -744,8 +747,3 @@ class ConsitencyTask(AtomisticTask):
         # update the target model with the new online model parameters
         self.ema.update()
         return super().on_train_batch_end(*args)
-
-    def on_validation_end(self, *args):
-        if self.diffusion_schedule is not None:
-            self.diffusion_schedule.increase_epoch()
-        return super().on_validation_end(*args)
