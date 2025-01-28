@@ -18,9 +18,10 @@ class ReverseProcess(nn.Module):
     """
     Abstract Class for reverse processes.
     """
-    @abstractmethod 
     def __init__(self, diffusion_process: DiffusionProcess, time_key: str = "t"):
+        super().__init__()
         self.diffusion_process = diffusion_process
+        self.time_key = time_key
         pass
 
     @abstractmethod
@@ -55,9 +56,8 @@ class ReverseODE(ReverseProcess):
             time_key: the key for the time.
             noise_pred_key: the key for the noise prediction.
         """
-        self.diffusion_process = diffusion_process
+        super().__init__(diffusion_process=diffusion_process, time_key=time_key)
         self.denoiser = denoiser
-        self.time_key = time_key
         self.noise_pred_key = noise_pred_key
         self.recompute_neighbors = recompute_neighbors
         self.save_progress = save_progress
@@ -256,18 +256,18 @@ class ReverseODEHeun(ReverseODE):
         x_t_intermediate = super()(inputs, t)
         t_intermediate = t - 1
 
-        x_t = (
-            super()(x_t_intermediate, t_intermediate) + x_t_intermediate
-        ) / 2
+        x_t = (super()(x_t_intermediate, t_intermediate) + x_t_intermediate) / 2
         x_t[t_intermediate == 0] = x_t_intermediate[t_intermediate == 0]
 
         return x_t
+
 
 class ReverseUnbiasedEstimator(ReverseProcess):
     """
     The unbiased score estimator proposed by Song et. al. 2022.
     This is meant to be used in conjunction with the above `Diffuse` transfrom.
     """
+
     def __init__(
         self,
         diffuse_property: str,
@@ -284,12 +284,10 @@ class ReverseUnbiasedEstimator(ReverseProcess):
                         if None, the diffuse_property key is used.
             time_key: key to save the normalized diffusion time step.
         """
-        super().__init__()
+        super().__init__(diffusion_process=diffusion_process, time_key=time_key)
         self.diffuse_property = diffuse_property
-        self.diffusion_process = diffusion_process
         self.output_key = output_key
         self.time_output_key = time_output_key
-        self.time_key = time_key
         self.noise_key = self.diffusion_process.noise_key
 
         # Sanity check
