@@ -530,7 +530,6 @@ class ConsitencyTask(AtomisticTask):
 
         self.time_key = time_key
         self.x_t_key = x_t_key
-        self.ema_decay = ema_decay
         self.reverse_process = reverse_process
         self.caster = caster
         self.cutoff = cutoff
@@ -712,6 +711,7 @@ class ConsitencyTask(AtomisticTask):
         
         if self.diffusion_schedule is not None:
             self.diffusion_schedule.increase_step()
+            self.ema.decay = self.diffusion_schedule.get_mu()
 
         return loss
 

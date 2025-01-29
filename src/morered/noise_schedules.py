@@ -1,11 +1,13 @@
 from functools import partial
 import logging
-from typing import Callable, Dict, Union
+from typing import Callable, Dict, Optional, Union
 import warnings
 
 import numpy as np
 import torch
 from torch import nn
+
+from morered.diffusion_schedule import DiffusionSchedule
 
 logger = logging.getLogger(__name__)
 __all__ = ["CosineSchedule", "PolynomialSchedule", "NoiseSchedule"]
@@ -117,8 +119,9 @@ class NoiseSchedule(nn.Module):
 
     def __init__(
         self,
-        T: int,
+        T: Optional[int],
         alphas_bar_function: callable,
+        diffusion_schedule: Optional[DiffusionSchedule],
         variance_type: str = "lower_bound",
         dtype: torch.dtype = torch.float64,
     ):
@@ -133,9 +136,18 @@ class NoiseSchedule(nn.Module):
         super().__init__()
 
         self.T = T
+        self.diffusion_schedule = diffusion_schedule
         self.alpha_bar_function = alphas_bar_function
         self.variance_type = variance_type
         self.dtype = dtype
+
+        if self.T is None and self.diffusion_schedule is None:
+            raise ValueError("Either T or diffusion_schedule need to be defined")
+        
+        if self.diffusion_schedule is not None:
+            if self.T is not None:
+                raise ValueError("Defining both T and diffusion_schedule is ambigous")
+            self.T = diffusion_schedule.get_T()
 
         if isinstance(self.dtype, str):
             if self.dtype == "float64":
@@ -213,9 +225,16 @@ class NoiseSchedule(nn.Module):
             2 * self.sigmas_square * self.alphas * self.betas_bar
         )
 
-    def update_T(self, T: int):
-        self.T = T
-        self.pre_compute_statistics()
+    def update_statistics(self):
+        # w/o a diffusion schedule there is nothing to do here
+        if self.diffusion_schedule is None:
+            return
+        
+        # update statistics if T has changed
+        T = self.diffusion_schedule.get_T()
+        if self.T != T:
+            self.T = T
+            self.pre_compute_statistics()
 
     def normalize_time(self, t: torch.Tensor) -> torch.Tensor:
         """
@@ -224,6 +243,8 @@ class NoiseSchedule(nn.Module):
         Args:
             t: time steps.
         """
+        self.update_statistics()
+        
         if torch.is_floating_point(t):
             raise ValueError("t must be integer.")
 
@@ -242,6 +263,8 @@ class NoiseSchedule(nn.Module):
         Args:
             t: normalized time steps.
         """
+        self.update_statistics()
+
         if not torch.is_floating_point(t):
             raise ValueError("t must be either float or double.")
 
@@ -257,6 +280,8 @@ class NoiseSchedule(nn.Module):
         Args:
             t: the query timestep.
         """
+        self.update_statistics()
+
         if not isinstance(t, torch.Tensor):
             raise ValueError("t must be a torch.Tensor.")
 
