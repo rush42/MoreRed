@@ -11,11 +11,13 @@ def _():
 
 
 @app.cell
-def _():
+def _(mo):
     import os
     os.environ["OMP_NUM_THREADS"] = "6" # export OMP_NUM_THREADS=4
     os.environ["OPENBLAS_NUM_THREADS"] = "6" # export OPENBLAS_NUM_THREADS=4
     os.environ["MKL_NUM_THREADS"] = "6" # export MKL_NUM_THREADS=6
+
+    os.chdir(mo.notebook_dir())
     return (os,)
 
 
@@ -203,7 +205,7 @@ def _(
 ):
     data_iter = iter(data.train_dataloader())
     n_batches = len(data_iter)
-    # n_batches = 50
+    n_batches = 50
 
     # initialize counters
     total_atoms = 0
@@ -227,7 +229,7 @@ def _(
         batch[properties.R] = x_t
 
         # denoise batch and check validity
-        denoised, _, _ = reverse_ode.denoise(batch, t=t)
+        denoised,  = reverse_ode.denoise(batch, t=t)
         batch.update(denoised)
         validity_res = check_validity(batch, *bonds_data.values())
         for m_key in molecule_stats.keys():
@@ -268,11 +270,6 @@ def _(atom_stats, molecule_stats, total_atoms, total_molecules):
     for k,v,in atom_stats.items():
         print(f"{k}: {v / total_atoms}")
     return k, v
-
-
-@app.cell
-def _():
-    return
 
 
 if __name__ == "__main__":
