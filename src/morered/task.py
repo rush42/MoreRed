@@ -709,9 +709,10 @@ class ConsitencyTask(AtomisticTask):
             )
             return None
         
+        # update the diffusion schedule
         if self.diffusion_schedule is not None:
-            self.diffusion_schedule.increase_step()
-            self.ema.decay = self.diffusion_schedule.get_mu()
+            self.diffusion_schedule.take_step()
+            self.ema.decay = self.diffusion_schedule.get_ema_decay()
 
         return loss
 
