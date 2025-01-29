@@ -5,18 +5,17 @@ app = marimo.App(width="full", app_title="LPIPS Tinkering")
 
 
 @app.cell
-def _():
+def _(mo):
     import os
     from pathlib import Path
     os.environ["OMP_NUM_THREADS"] = "6" # export OMP_NUM_THREADS=4
     os.environ["OPENBLAS_NUM_THREADS"] = "6" # export OPENBLAS_NUM_THREADS=4
     os.environ["MKL_NUM_THREADS"] = "6" # export MKL_NUM_THREADS=6
     # Get the directory of the notebook
-    notebook_dir = Path().resolve()
 
     # Change the current working directory to the notebook directory
-    os.chdir(notebook_dir)
-    return Path, notebook_dir, os
+    os.chdir(mo.notebook_dir)
+    return Path, os
 
 
 @app.cell
@@ -74,9 +73,9 @@ def _():
     )
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(mo):
-    mo.md(r"""# Paths""")
+    mo.md(r"# Paths")
     return
 
 
@@ -90,9 +89,9 @@ def _():
     return models_path, split_file_path
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(mo):
-    mo.md(r"""# Load model""")
+    mo.md(r"# Load model")
     return
 
 
@@ -103,9 +102,9 @@ def _(models_path, os, torch):
     return (time_predictor,)
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(mo):
-    mo.md(r"""# Define sampler""")
+    mo.md(r"# Define sampler")
     return
 
 
@@ -120,15 +119,15 @@ def _(PolynomialSchedule, VPGaussianDDPM, torch):
     return T, diff_proc, noise_schedule
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(mo):
-    mo.md(r"""# Define data loader""")
+    mo.md(r"# Define data loader")
     return
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(mo):
-    mo.md(r"""Define paths""")
+    mo.md(r"Define paths")
     return
 
 
@@ -144,21 +143,21 @@ def _(os, tut_path):
     return
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(mo):
-    mo.md(r"""Define data input transformations""")
+    mo.md(r"Define data input transformations")
     return
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(mo):
-    mo.md(r"""QM7X""")
+    mo.md(r"QM7X")
     return
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(mo):
-    mo.md(r"""NOTE! QM7-X is large. Therefore, it takes time to download the dataset and prepare it""")
+    mo.md(r"NOTE! QM7-X is large. Therefore, it takes time to download the dataset and prepare it")
     return
 
 
@@ -193,9 +192,9 @@ def _(QM7X, datapath, split_file_path, transforms):
     return (data,)
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(mo):
-    mo.md(r"""Prepare dataset""")
+    mo.md(r"Prepare dataset")
     return
 
 
@@ -207,15 +206,15 @@ def _(data):
     return
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(mo):
-    mo.md(r"""# Representation Loss""")
+    mo.md(r"# Representation Loss")
     return
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(mo):
-    mo.md(r"""Load a batch""")
+    mo.md(r"Load a batch")
     return
 
 
@@ -332,9 +331,9 @@ def _(plt, scalar_losses, vector_losses, vector_norm_losses):
     return
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(mo):
-    mo.md(r"""## Tinkering""")
+    mo.md(r"## Tinkering")
     return
 
 
