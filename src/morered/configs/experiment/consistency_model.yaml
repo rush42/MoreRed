@@ -17,7 +17,7 @@ run:
   experiment: consistency_model
   id: ${uuid:1}
   dir: consistency_model_#${run.id}
-  # ckpt_path: ${run.path}/2366d392-c2b6-11ef-a3a4-a088c2c68c7a/checkpoints/last.ckpt
+  # ckpt_path: ${run.path}/consistency_lrs/checkpoints/last.ckpt
 
 globals:
   model_path: best_model
@@ -78,7 +78,7 @@ trainer:
   enable_model_summary: true
   profiler: null
   # profiler: ${globals.profiler}
-  gradient_clip_val: 50
+  # gradient_clip_val: 50
   accumulate_grad_batches: 1
   val_check_interval: 1.0
   check_val_every_n_epoch: 1
@@ -103,7 +103,7 @@ task:
   ema_decay: 0.99995
   skip_referenceless_batches: false
   skip_exploding_batches: true
-  loss_limit: 0.5
+  loss_limit: 2.0
   # diffusion_schedule: ${globals.diffusion_schedule}
   optimizer_args:
     lr: ${globals.lr}
