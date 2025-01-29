@@ -121,7 +121,7 @@ class NoiseSchedule(nn.Module):
         self,
         T: Optional[int],
         alphas_bar_function: callable,
-        diffusion_schedule: Optional[DiffusionSchedule],
+        diffusion_schedule: Optional[DiffusionSchedule] = None,
         variance_type: str = "lower_bound",
         dtype: torch.dtype = torch.float64,
     ):
