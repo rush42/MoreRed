@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 import torch
 from torch import nn
 from schnetpack.model import AtomisticModel
@@ -20,6 +20,7 @@ class ConsistencyParametrization(AtomisticModel):
         time_key: str,
         epsilon: float = 0,
         sigma_data: Optional[float] = 0.5,
+        initialize_with_denoiser: Optional[Union[str, nn.Module]] = None,
         **kwargs,
     ):
         """
@@ -33,6 +34,15 @@ class ConsistencyParametrization(AtomisticModel):
         super().__init__(kwargs)
 
         self.source_model = source_model
+
+        # initalize model weights when given
+        if initialize_with_denoiser is not None:
+            if isinstance(initialize_with_denoiser, str):
+                weights = torch.load(initialize_with_denoiser, map_location='cpu').state_dict()
+            else:
+                weights = initialize_with_denoiser.state_dict()
+            self.source_model.load_state_dict(weights)
+
         self.epsilon = epsilon
         self.sigma_data = sigma_data
         

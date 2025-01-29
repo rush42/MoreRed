@@ -101,7 +101,6 @@ task:
   reverse_process: ${globals.reverse_process}
   optimizer_cls: torch.optim.AdamW
   ema_decay: 0.99995
-  initialize_with_denoiser: true
   skip_referenceless_batches: false
   skip_exploding_batches: true
   loss_limit: 0.5
@@ -152,6 +151,7 @@ task:
 
 model:
   _target_: morered.model.consistency_parametrization.ConsistencyParametrization
+  initialize_with_denoiser: ${globals.denoiser_path}
   time_key: ${globals.time_target_key}
   input_key: ${globals.x_t_target_key}
   output_key: ${globals.x_0_output_key}

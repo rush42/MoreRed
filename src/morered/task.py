@@ -517,7 +517,6 @@ class ConsitencyTask(AtomisticTask):
         skip_exploding_batches: bool = True,
         loss_limit: float = 5e-2,
         skip_referenceless_batches: bool = True,
-        initialize_with_denoiser: bool = False,
         diffusion_schedule: Optional[DiffusionSchedule] = None,
         **kwargs,
     ):
@@ -540,9 +539,6 @@ class ConsitencyTask(AtomisticTask):
         self.diffusion_schedule = diffusion_schedule
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-        if initialize_with_denoiser:
-            model.source_model.load_state_dict(self.reverse_process.denoiser.state_dict())
 
         # create target and online model
         self.model = model
