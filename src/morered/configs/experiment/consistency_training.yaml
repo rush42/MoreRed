@@ -15,10 +15,5 @@ globals:
   reverse_process:
     _target_: morered.reverse_process.ReverseUnbiasedEstimator
 
-trainer:
-  max_epochs: 10000
-  precision: 32
-  log_every_n_steps: 5
-
 task:
   diffusion_schedule: ${globals.diffusion_schedule}
