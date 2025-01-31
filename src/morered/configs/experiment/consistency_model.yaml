@@ -16,13 +16,13 @@ run:
   model_dir: ${run.work_dir}/models
   experiment: consistency_model
   id: ${uuid:1}
-  dir: consistency_model_#${run.id}
+  dir: consistency_lrs_lre-3
   # ckpt_path: ${run.path}/consistency_lrs/checkpoints/last.ckpt
 
 globals:
   model_path: best_model
   cutoff: 500
-  lr: 1.0e-4
+  lr: 1.e-3
   permutation_invariant: true
   rotation_invariant: false
   include_t_0: false
@@ -254,3 +254,5 @@ callbacks:
     monitor: ${globals.monitor_metric}
 
 matmul_precision: 'high'
+
+seed: 3585083669
