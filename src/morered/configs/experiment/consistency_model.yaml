@@ -14,9 +14,9 @@ run:
   data_dir: ${run.work_dir}/data
   path: ${run.work_dir}/runs
   model_dir: ${run.work_dir}/models
-  experiment: consistency_model
+  experiment: consistency_distillation
   id: ${uuid:1}
-  dir: consistency_lrs_lre-3
+  dir: ${id}
   # ckpt_path: ${run.path}/consistency_lrs/checkpoints/last.ckpt
 
 globals:
