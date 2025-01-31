@@ -32,7 +32,7 @@ class DiffusionSchedule(nn.Module):
         global step
         return math.ceil(
             math.sqrt(
-                step / self.K((self.T_1 + 1) ** 2 - self.T_0**2) + self.T_0**2 - 1
+                (step / self.K) * ((self.T_1 + 1) ** 2 - self.T_0**2) + self.T_0**2 - 1
             )
         )
     

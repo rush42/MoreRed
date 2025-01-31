@@ -8,7 +8,7 @@ from torch import nn
 from tqdm import tqdm
 
 from morered.processes import DiffusionProcess
-from morered.processes.functional import sample_isotropic_Gaussian
+from morered.processes.functional import _check_shapes, sample_isotropic_Gaussian
 from morered.utils import compute_neighbors, scatter_mean
 
 __all__ = ["ReverseProcess", "ReverseODE", "ReverseODEHeun", "ReverseUnbiasedEstimator"]
@@ -272,8 +272,6 @@ class ReverseUnbiasedEstimator(ReverseProcess):
         self,
         diffuse_property: str,
         diffusion_process: DiffusionProcess,
-        output_key: str,
-        time_output_key: str,
         time_key: str = "t",
     ):
         """
@@ -286,8 +284,6 @@ class ReverseUnbiasedEstimator(ReverseProcess):
         """
         super().__init__(diffusion_process=diffusion_process, time_key=time_key)
         self.diffuse_property = diffuse_property
-        self.output_key = output_key
-        self.time_output_key = time_output_key
         self.noise_key = self.diffusion_process.noise_key
 
         # Sanity check
@@ -308,9 +304,10 @@ class ReverseUnbiasedEstimator(ReverseProcess):
         Args:
             inputs: dictionary of input tensors as in SchNetPack.
         """
+        dtype = inputs[f"original_{self.diffuse_property}"].dtype
 
         # get x_0, t and noise from inputs
-        x_0 = inputs[f"original_{self.diffuse_property}"].to(self.dtype)
+        x_0 = inputs[f"original_{self.diffuse_property}"].to(dtype)
         t = inputs[self.time_key]
         noise = inputs[self.noise_key]
 
@@ -319,11 +316,12 @@ class ReverseUnbiasedEstimator(ReverseProcess):
         t_next = t - t_1
 
         # query noise parameters.
-        mean, std = self.perturbation_kernel(x_0, t_next)
+        x_0, t_next = _check_shapes(x_0, t_next)
+        mean, std = self.diffusion_process.perturbation_kernel(x_0, t_next)
 
         # sample by Gaussian diffusion.
-        (x_t_next,) = sample_isotropic_Gaussian(
-            mean, std, invariant=self.invariant, idx_m=None, noise=noise
+        x_t_next, _ = sample_isotropic_Gaussian(
+            mean, std, invariant=self.diffusion_process.invariant, idx_m=None, noise=noise
         )
 
         return x_t_next

@@ -4,16 +4,23 @@ defaults:
 
 runs:
   experiment: consistency_training
+
 globals:
   diffusion_schedule:
     _target_: morered.diffusion_schedule.DiffusionSchedule
-    T: ${globals.T}
+    T_1: ${globals.T}
 
   noise_schedule:
+    T: null
     diffusion_schedule: ${globals.diffusion_schedule}
   
-  reverse_process:
+  reverse_unbiased_estimator:
     _target_: morered.reverse_process.ReverseUnbiasedEstimator
+    diffusion_process: ${globals.diffusion_process}
+    diffuse_property: ${globals.x_t_target_key}
+    time_key: ${globals.time_target_key}
+
 
 task:
+  reverse_process: ${globals.reverse_unbiased_estimator}
   diffusion_schedule: ${globals.diffusion_schedule}
