@@ -1,0 +1,24 @@
+# @package _global_
+defaults:
+  - consistency_distillation
+
+runs:
+  experiment: consistency_training
+globals:
+  diffusion_schedule:
+    _target_: morered.diffusion_schedule.DiffusionSchedule
+    T: ${globals.T}
+
+  noise_schedule:
+    diffusion_schedule: ${globals.diffusion_schedule}
+  
+  reverse_process:
+    _target_: morered.reverse_process.ReverseUnbiasedEstimator
+
+trainer:
+  max_epochs: 10000
+  precision: 32
+  log_every_n_steps: 5
+
+task:
+  diffusion_schedule: ${globals.diffusion_schedule}

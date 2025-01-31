@@ -16,7 +16,7 @@ run:
   model_dir: ${run.work_dir}/models
   experiment: consistency_distillation
   id: ${uuid:1}
-  dir: ${id}
+  dir: ${run.id}
   # ckpt_path: ${run.path}/consistency_lrs/checkpoints/last.ckpt
 
 globals:
@@ -47,10 +47,6 @@ globals:
     s: 1.0e-05
     dtype: float64
     variance_type: lower_bound
-
-  diffusion_schedule:
-    _target_: morered.diffusion_schedule.DiffusionSchedule
-    T: ${globals.T}
     
   diffusion_process:
     _target_: morered.processes.VPGaussianDDPM
@@ -83,7 +79,6 @@ task:
   skip_referenceless_batches: false
   skip_exploding_batches: true
   loss_limit: 2.0
-  # diffusion_schedule: ${globals.diffusion_schedule}
   optimizer_args:
     lr: ${globals.lr}
     weight_decay: 0.0
@@ -176,7 +171,6 @@ data:
   - _target_: morered.transform.Diffuse
     diffuse_property: ${globals.x_t_target_key}
     diffusion_process: ${globals.diffusion_process}
-    # diffusion_schedule: ${globals.diffusion_schedule}
     time_key: ${globals.time_target_key}
     include_t_0: ${globals.include_t_0}
     t_1_bonus: ${globals.t_1_bonus}
