@@ -37,7 +37,7 @@ class DiffusionSchedule(nn.Module):
         )
     
     def get_ema_decay(self):
-        math.exp(self.T_0 * math.log(self.mu_0) / self.get_T())
+        return math.exp(self.T_0 * math.log(self.mu_0) / self.get_T())
 
     def take_step(self):
         global step
