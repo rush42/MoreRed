@@ -24,3 +24,7 @@ globals:
 task:
   reverse_process: ${globals.reverse_unbiased_estimator}
   diffusion_schedule: ${globals.diffusion_schedule}
+
+callbacks:
+  sampling:
+    t: null
