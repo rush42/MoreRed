@@ -87,17 +87,9 @@ task:
   optimizer_args:
     lr: ${globals.lr}
     weight_decay: 0.0
-  scheduler_cls: schnetpack.train.ReduceLROnPlateau
   scheduler_monitor: ${globals.monitor_metric}
   scheduler_args:
-    mode: min
-    factor: 0.5
     patience: 1500
-    threshold: 0.0
-    threshold_mode: rel
-    cooldown: 10
-    min_lr: 0
-    smoothing_factor: 0.0
   warmup_steps: 0
   time_key: ${globals.time_target_key}
   x_t_key: ${globals.x_t_target_key}
