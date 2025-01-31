@@ -71,30 +71,9 @@ globals:
   #   path: ${run.dir}
 
 trainer:
-  _target_: pytorch_lightning.Trainer
-  devices: 1
-  min_epochs: null
   max_epochs: 10000
-  enable_model_summary: true
-  profiler: null
-  # profiler: ${globals.profiler}
-  # gradient_clip_val: 50
-  accumulate_grad_batches: 1
-  val_check_interval: 1.0
-  check_val_every_n_epoch: 1
-  log_every_n_steps: 5
-  num_sanity_val_steps: 0
-  fast_dev_run: false
-  overfit_batches: 0
-  limit_train_batches: 1.0
-  limit_val_batches: 1.0
-  limit_test_batches: 1.0
-  detect_anomaly: false
   precision: 32
-  accelerator: auto
-  num_nodes: 1
-  deterministic: false
-  inference_mode: false
+  log_every_n_steps: 5
 
 task:
   _target_: morered.ConsitencyTask
@@ -193,25 +172,12 @@ model:
       name: ${globals.x_0_output_key}
 
 data:
-  _target_: morered.datasets.QM7X
-  datapath: ${run.data_dir}/qm7x.db
-  data_workdir: null
   batch_size: 225
   split_file: ${globals.split_file_path}
   num_train: null
   num_val: null
   num_test: null
   num_workers: 4
-  num_val_workers: null
-  num_test_workers: null
-  raw_data_path: ${run.data_dir}
-  remove_duplicates: true
-  only_equilibrium: true
-  distance_unit: Ang
-  property_units:
-    energy: eV
-  load_properties:
-  - energy
   pin_memory: true
   transforms:
   - _target_: schnetpack.transform.CastTo64
@@ -230,12 +196,6 @@ data:
 
   - _target_: schnetpack.transform.CastTo32
 
-logger:
-  tensorboard:
-    _target_: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
-    save_dir: tensorboard/
-    name: default
-print_config: true
 
 sampler:
   _target_: morered.sampling.ConsistencySampler
