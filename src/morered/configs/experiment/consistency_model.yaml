@@ -88,8 +88,6 @@ task:
     lr: ${globals.lr}
     weight_decay: 0.0
   scheduler_monitor: ${globals.monitor_metric}
-  scheduler_args:
-    patience: 1500
   warmup_steps: 0
   time_key: ${globals.time_target_key}
   x_t_key: ${globals.x_t_target_key}
