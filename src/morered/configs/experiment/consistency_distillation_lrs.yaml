@@ -1,0 +1,19 @@
+# @package _global_
+defaults:
+  consistency_distillation
+
+run:
+  experiment: consistency_distillation_lrs
+
+task:
+  outputs:
+    - _target_: morered.task.LRSOutput
+      name: ${globals.x_0_output_key}
+      source_model: ${globals.time_predictor_path}
+      loss_fn:
+        _target_: torch.nn.MSELoss
+      metrics:
+        mse:
+          _target_: torchmetrics.regression.MeanSquaredError
+          squared: true
+      loss_weight: 0.01

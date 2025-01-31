@@ -87,32 +87,18 @@ task:
   time_key: ${globals.time_target_key}
   x_t_key: ${globals.x_t_target_key}
   outputs:
-    # - _target_: morered.task.ConsistencyModelOutput
-    #   name: ${globals.x_0_output_key}
-    #   permutation_invariant: ${globals.permutation_invariant}
-    #   rotation_invariant: ${globals.rotation_invariant}
-    #   loss_fn:
-    #     _target_: torch.nn.MSELoss
-    #   metrics:
-    #     mse:
-    #       _target_: torchmetrics.regression.MeanSquaredError
-    #       squared: true
-    #   loss_weight: 1.0
-    # - _target_: morered.task.NormRegularizer
-    #   name: ${globals.x_0_output_key}
-    #   limit: ${globals.norm_regularization}
-    #   loss_weight: 1.0
-    - _target_: morered.task.LRSOutput
+    - _target_: morered.task.ConsistencyModelOutput
       name: ${globals.x_0_output_key}
-      source_model: ${globals.time_predictor_path}
+      permutation_invariant: ${globals.permutation_invariant}
+      rotation_invariant: ${globals.rotation_invariant}
       loss_fn:
         _target_: torch.nn.MSELoss
       metrics:
         mse:
           _target_: torchmetrics.regression.MeanSquaredError
           squared: true
-      loss_weight: 0.01
-
+      loss_weight: 1.0
+      
 model:
   _target_: morered.model.consistency_parametrization.ConsistencyParametrization
   initialize_with_denoiser: ${globals.denoiser_path}
