@@ -6,6 +6,7 @@ run:
   experiment: consistency_distillation_lrs
 
 task:
+  loss_limit: 2.0
   outputs:
     - _target_: morered.task.LRSOutput
       name: ${globals.x_0_output_key}

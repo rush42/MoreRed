@@ -78,7 +78,6 @@ task:
   ema_decay: 0.99995
   skip_referenceless_batches: false
   skip_exploding_batches: true
-  loss_limit: 2.0
   optimizer_args:
     lr: ${globals.lr}
     weight_decay: 0.0

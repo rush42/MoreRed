@@ -515,7 +515,7 @@ class ConsitencyTask(AtomisticTask):
         cutoff: float = 500.0,
         recompute_neighbors: bool = True,
         skip_exploding_batches: bool = True,
-        loss_limit: float = 5e-2,
+        loss_limit: float = 1e100,
         skip_referenceless_batches: bool = True,
         diffusion_schedule: Optional[DiffusionSchedule] = None,
         **kwargs,
