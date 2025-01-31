@@ -188,7 +188,7 @@ def _(mo):
 @app.cell
 def _():
     # time step for diffusion
-    t = 250
+    t = 300
     return (t,)
 
 
@@ -205,7 +205,8 @@ def _(
 ):
     data_iter = iter(data.train_dataloader())
     n_batches = len(data_iter)
-    n_batches = 50
+
+    limit_batches = 10
 
     # initialize counters
     total_atoms = 0
@@ -224,12 +225,12 @@ def _(
         # diffuse batch
         batch = {k: v.clone() for k, v in target.items()}
         x_t, _ = diff_proc.diffuse(
-            batch[properties.R], idx_m=batch[properties.idx_m], t=torch.tensor(75)
+            batch[properties.R], idx_m=batch[properties.idx_m], t=torch.tensor(t)
         )
         batch[properties.R] = x_t
 
         # denoise batch and check validity
-        denoised,  = reverse_ode.denoise(batch, t=t)
+        denoised,_,_ = reverse_ode.denoise(batch, t=t)
         batch.update(denoised)
         validity_res = check_validity(batch, *bonds_data.values())
         for m_key in molecule_stats.keys():
@@ -239,6 +240,9 @@ def _(
                 atom_stats[a_key] += sum(validity_res[a_key][i])
 
         print(f"completed: {batch_idx + 1}/{n_batches}")
+
+        if limit_batches and batch_idx >= limit_batches:
+            break
     return (
         a_key,
         atom_stats,
@@ -247,6 +251,7 @@ def _(
         data_iter,
         denoised,
         i,
+        limit_batches,
         m_key,
         molecule_stats,
         n_atoms,

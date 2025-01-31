@@ -1,7 +1,7 @@
 import marimo
 
 __generated_with = "0.10.15"
-app = marimo.App(width="full", app_title="LPIPS Tinkering")
+app = marimo.App(width="medium", app_title="LPIPS Tinkering")
 
 
 @app.cell
@@ -14,7 +14,7 @@ def _(mo):
     # Get the directory of the notebook
 
     # Change the current working directory to the notebook directory
-    os.chdir(mo.notebook_dir)
+    os.chdir(mo.notebook_dir())
     return Path, os
 
 
@@ -24,6 +24,7 @@ def _():
 
     import torch
     from torch import nn
+    import torch.nn.functional as F
 
     from omegaconf import OmegaConf
     from ase.visualize.plot import plot_atoms
@@ -46,6 +47,7 @@ def _():
         ConsistencySampler,
         CosineSchedule,
         DDPM,
+        F,
         MoreRedAS,
         MoreRedITP,
         MoreRedJT,
@@ -75,7 +77,7 @@ def _():
 
 @app.cell
 def _(mo):
-    mo.md(r"# Paths")
+    mo.md(r"""# Paths""")
     return
 
 
@@ -91,7 +93,7 @@ def _():
 
 @app.cell
 def _(mo):
-    mo.md(r"# Load model")
+    mo.md(r"""# Load model""")
     return
 
 
@@ -104,14 +106,14 @@ def _(models_path, os, torch):
 
 @app.cell
 def _(mo):
-    mo.md(r"# Define sampler")
+    mo.md(r"""# Define sampler""")
     return
 
 
 @app.cell
 def _(PolynomialSchedule, VPGaussianDDPM, torch):
     # define the noise schedule
-    T = 400
+    T = 100
     noise_schedule = PolynomialSchedule(T=T, s=1e-5, dtype=torch.float64, variance_type="lower_bound")
 
     # define the forward diffusion process
@@ -121,13 +123,13 @@ def _(PolynomialSchedule, VPGaussianDDPM, torch):
 
 @app.cell
 def _(mo):
-    mo.md(r"# Define data loader")
+    mo.md(r"""# Define data loader""")
     return
 
 
 @app.cell
 def _(mo):
-    mo.md(r"Define paths")
+    mo.md(r"""Define paths""")
     return
 
 
@@ -145,19 +147,19 @@ def _(os, tut_path):
 
 @app.cell
 def _(mo):
-    mo.md(r"Define data input transformations")
+    mo.md(r"""Define data input transformations""")
     return
 
 
 @app.cell
 def _(mo):
-    mo.md(r"QM7X")
+    mo.md(r"""QM7X""")
     return
 
 
 @app.cell
 def _(mo):
-    mo.md(r"NOTE! QM7-X is large. Therefore, it takes time to download the dataset and prepare it")
+    mo.md(r"""NOTE! QM7-X is large. Therefore, it takes time to download the dataset and prepare it""")
     return
 
 
@@ -194,7 +196,7 @@ def _(QM7X, datapath, split_file_path, transforms):
 
 @app.cell
 def _(mo):
-    mo.md(r"Prepare dataset")
+    mo.md(r"""Prepare dataset""")
     return
 
 
@@ -208,13 +210,13 @@ def _(data):
 
 @app.cell
 def _(mo):
-    mo.md(r"# Representation Loss")
+    mo.md(r"""# Representation Loss""")
     return
 
 
 @app.cell
 def _(mo):
-    mo.md(r"Load a batch")
+    mo.md(r"""Load a batch""")
     return
 
 
@@ -261,51 +263,63 @@ def _(T, diff_proc, properties, target, torch):
 
 @app.cell
 def _(properties, target):
-    _n = target[properties.n_atoms][0]
+    n = target[properties.n_atoms][0]
     power = 2
     def vector_norm_loss(target, pred):
         diff = pred['vector_representation'] - target['vector_representation']
-        return diff.detach().norm(dim=1).pow(power).mean() / _n
+        return diff.detach().norm(dim=1).pow(power).mean() / n
 
     def vector_loss(target, pred):
         diff = pred['vector_representation'] - target['vector_representation']
-        return diff.detach().norm().pow(power) / _n
+        return diff.detach().norm().pow(power) / n
 
     def scalar_loss(target, pred):
         diff = pred['scalar_representation'] - target['scalar_representation']
-        return diff.detach().norm().pow(power) / _n
-    return power, scalar_loss, vector_loss, vector_norm_loss
+        return diff.detach().norm().pow(power) / n
+    return n, power, scalar_loss, vector_loss, vector_norm_loss
 
 
 @app.cell
 def _(
+    F,
     T,
     prepare_batch,
     properties,
     representation,
     scalar_loss,
     target,
+    torch,
     traj,
     vector_loss,
     vector_norm_loss,
 ):
-    _batch = {key: val.clone() for key, val in target.items()}
+    batch = {key: val.clone() for key, val in target.items()}
     target_hat = prepare_batch(target)
     target_reprs = representation(target_hat)
     vector_norm_losses = []
     vector_losses = []
     scalar_losses = []
+    mse = []
     for i in range(T):
-        _batch[properties.R] = traj[i]
-        batch_hat = prepare_batch(_batch)
+        batch[properties.R] = traj[i]
+        batch_hat = prepare_batch(batch)
         batch_reprs = representation(batch_hat)
         vector_norm_losses.append(vector_norm_loss(target_reprs, batch_reprs))
         vector_losses.append(vector_loss(target_reprs, batch_reprs))
         scalar_losses.append(scalar_loss(target_reprs, batch_reprs))
+        mse.append(F.mse_loss(batch[properties.R], target[properties.R], reduction='mean'))
+
+    # convert to torch
+    mse = torch.Tensor(mse)
+    vector_norm_losses = torch.Tensor(vector_norm_losses)
+    vector_losses = torch.Tensor(vector_losses)
+    scalar_losses = torch.Tensor(scalar_losses)
     return (
+        batch,
         batch_hat,
         batch_reprs,
         i,
+        mse,
         scalar_losses,
         target_hat,
         target_reprs,
@@ -315,14 +329,15 @@ def _(
 
 
 @app.cell
-def _(plt, scalar_losses, vector_losses, vector_norm_losses):
+def _(mse, plt, vector_norm_losses):
     plt.figure(figsize=(8, 4))
     plt.xlabel(r"t")
     plt.ylabel(r"loss")
 
-    plt.plot(scalar_losses, '.', label='scalar')
-    plt.plot(vector_losses, '.', label='vector')
-    plt.plot(vector_norm_losses, '.', label='vector (norm)')
+    plt.plot(mse, '.', label='mse')
+    # plt.plot((0.001 * scalar_losses).log(), '.', label='scalar')
+    # plt.plot(vector_losses, '.', label='vector')
+    plt.plot((4 * vector_norm_losses).pow(4), '.', label='vector (norm)')
 
     plt.legend()
     plt.grid()
@@ -331,9 +346,9 @@ def _(plt, scalar_losses, vector_losses, vector_norm_losses):
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"## Tinkering")
+    mo.md(r"""## Tinkering""")
     return
 
 
