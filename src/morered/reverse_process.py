@@ -308,12 +308,11 @@ class ReverseUnbiasedEstimator(ReverseProcess):
 
         # get x_0, t and noise from inputs
         x_0 = inputs[f"original_{self.diffuse_property}"].to(dtype)
-        t = inputs[self.time_key]
         noise = inputs[self.noise_key]
 
         # take one step towards the data in normalized space
-        t_1 = self.diffusion_process.normalize_time(torch.tensor(1))
-        t_next = t - t_1
+        t = self.diffusion_process.unnormalize_time(inputs[self.time_key])
+        t_next = t - 1
 
         # query noise parameters.
         x_0, t_next = _check_shapes(x_0, t_next)
